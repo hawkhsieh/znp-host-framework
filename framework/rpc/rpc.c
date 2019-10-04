@@ -226,15 +226,13 @@ int32_t rpcWaitMqClientMsg(uint32_t timeout)
 		mAftTime += aftTime.tv_usec / 1000;
 		timeLeft = mAftTime - mBefTime;
 		timeLeft = timeout - timeLeft;
-		dbg_print(PRINT_LEVEL_INFO, "rpcWaitMqClientMsg: processing MT[%d]\n",
-		        rpcLen);
+        dbg_print(PRINT_LEVEL_INFO, "rpcWaitMqClientMsg: processing MT[%d]\n", rpcLen);
 		// process incoming message
 		mtProcess(rpcFrame, rpcLen);
 	}
 	else
 	{
-		dbg_print(PRINT_LEVEL_INFO, "rpcWaitMqClientMsg: Timed out [%d] - %s\n",
-		        rpcLen, strerror(errno));
+        dbg_print(PRINT_LEVEL_INFO, "rpcWaitMqClientMsg: Timed out [%d] - %s\n", rpcLen, strerror(errno));
 		return -1;
 	}
 
@@ -542,11 +540,12 @@ static uint8_t calcFcs(uint8_t *msg, uint8_t size)
  */
 static void printRpcMsg(char* preMsg, uint8_t sof, uint8_t len, uint8_t *msg)
 {
-    print_hexdump("znp",msg,len+5);
-
 	// print headers
     dbg_print(PRINT_LEVEL_INFO,
 	        "%s %d Bytes: SOF:%02X, Len:%02X, CMD0:%02X, CMD1:%02X, Payload:",
 	        preMsg, len + 5, sof, len, msg[0], msg[1]);
+    if (len>2){
+        print_hexdump("znp",msg,len);
+    }
 
 }

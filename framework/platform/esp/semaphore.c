@@ -166,7 +166,7 @@ static int sem_pend(sem_t * sem, uint32_t timeout)
 
 	if (sem != SEM_FAILED)
 	{
-        if ( xSemaphoreTake( *sem, timeout/portTICK_RATE_MS ) == pdFALSE ) return 0;
+        if ( xSemaphoreTake( *sem, timeout/portTICK_RATE_MS ) == pdFALSE ) return -1;
 
         ret=0;
 	}
