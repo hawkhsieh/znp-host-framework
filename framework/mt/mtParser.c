@@ -50,6 +50,7 @@
 #include "mtZdo.h"
 #include "mtAf.h"
 #include "mtSapi.h"
+#include "mtSpt.h"
 
 #include "dbgPrint.h"
 
@@ -105,6 +106,9 @@ void mtProcess(uint8_t *rpcBuff, uint8_t rpcLen)
         sapiProcess(rpcBuff, rpcLen);
         break;
 
+    case MT_RPC_SYS_SPT:
+        sptProcess(rpcBuff, rpcLen);
+        break;
     default:
         dbg_print(PRINT_LEVEL_VERBOSE,
                 "mtProcess: CMD0:%x, CMD1:%x, not handled\n", rpcBuff[0],

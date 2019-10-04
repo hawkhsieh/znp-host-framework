@@ -127,7 +127,7 @@ extern "C"
 #define ZCD_NV_APS_USE_INSECURE_JOIN      0x0048
 #define ZCD_NV_COMMISSIONED_NWK_ADDR      0x0049
 
-#define ZCD_NV_APS_NONMEMBER_RADIUS       0x004B     // Multicast non_member radius#define ZCD_NV_APS_LINK_KEY_TABLE         0x004C
+#define ZCD_NV_APS_NONMEMBER_RADIUS       0x004B     // Multicast non_member radius#define ZCD_NV_APS_LINK_KEY_TABLE         0x004C
 #define ZCD_NV_APS_DUPREJ_TIMEOUT_INC     0x004D
 #define ZCD_NV_APS_DUPREJ_TIMEOUT_COUNT   0x004E
 #define ZCD_NV_APS_DUPREJ_TABLE_SIZE      0x004F
@@ -207,11 +207,11 @@ extern "C"
 
 // NV Items Reserved for APS Link Key Table entries
 // 0x0201 - 0x02FF
-#define ZCD_NV_APS_LINK_KEY_DATA_START    0x0201     // APS key data#define ZCD_NV_APS_LINK_KEY_DATA_END      0x02FF
+#define ZCD_NV_APS_LINK_KEY_DATA_START    0x0201     // APS key data#define ZCD_NV_APS_LINK_KEY_DATA_END      0x02FF
 
 // NV Items Reserved for Master Key Table entries
 // 0x0301 - 0x03FF
-#define ZCD_NV_MASTER_KEY_DATA_START      0x0301     // Master key data#define ZCD_NV_MASTER_KEY_DATA_END        0x03FF
+#define ZCD_NV_MASTER_KEY_DATA_START      0x0301     // Master key data#define ZCD_NV_MASTER_KEY_DATA_END        0x03FF
 
 // NV Items Reserved for applications (user applications)
 // 0x0401 � 0x0FFF

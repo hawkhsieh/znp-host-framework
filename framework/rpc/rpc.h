@@ -123,6 +123,7 @@ typedef enum
 	MT_RPC_SYS_ZNP,
 	MT_RPC_SYS_SPARE_12,
 	MT_RPC_SYS_SBL = 13, // 13 to be compatible with existing RemoTI - AKA MT_RPC_SYS_UBL
+    MT_RPC_SYS_SPT = 22,
 	MT_RPC_SYS_MAX // Maximum value, must be last (so 14-32 available, not yet assigned).
 } mtRpcSysType_t;
 

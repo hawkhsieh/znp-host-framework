@@ -52,7 +52,6 @@
 #include <semaphore.h>
 #include <time.h>
 #include "queue.h"
-#include <time.h>
 
 #include "rpc.h"
 #include "rpcTransport.h"
@@ -256,6 +255,77 @@ void rpcForceRun(void)
 	rpcTransportWrite(&forceBoot, 1);
 }
 
+#if 1
+typedef struct {
+    uint8_t *head;
+    int pktSize;
+}pkt_t;
+#define HEAD_SIZE 4
+
+int collectPacket( pkt_t *pkt,uint8_t *buf , int dataLen ){
+
+    int readLen=0;
+
+    bzero(pkt,sizeof(pkt_t));
+    if(dataLen < HEAD_SIZE){
+        return 0;
+    }
+    int i;
+    for (i=0;i<dataLen;i++){
+        if ( buf[i]==MT_RPC_SOF ){
+            break;
+        }
+    }
+    if (i>=dataLen){
+        errf("cant found 0xfe\n");
+        return dataLen;
+    }
+
+    if (i != 0){
+        infof("get rid of trash in front of header\n");
+        memmove(buf,&buf[i],i);
+        readLen=i;
+        dataLen-=i;
+    }
+
+/*
+    if (TAG_VERSION[0]=='0' &&TAG_VERSION[0]=='.' &&TAG_VERSION[0]=='1'){
+       char *mac=recvBPacket.mac;
+       memrev(mac,8);
+    }
+    */
+
+    int rpcLen=buf[1];
+    char cmd0,cmd1;
+
+    cmd0=buf[2];
+    cmd1=buf[3];
+#define FCS_LEN 1
+
+    int onePktLen=rpcLen+HEAD_SIZE+FCS_LEN; //0xfe,rpcLen,cmd0,cmd1,data...,fcs
+    if (dataLen < onePktLen){
+        return readLen;
+    }
+    print_hexdump("uart content",buf,dataLen);
+    readLen += onePktLen;
+
+#define SOF_LEN 1
+    uint8_t fcs;
+    //Verify FCS of incoming MT frames
+    fcs = calcFcs(&buf[1], (onePktLen-SOF_LEN-FCS_LEN));
+    if (buf[onePktLen-1] != fcs)
+    {
+        dbg_print(PRINT_LEVEL_WARNING, "rpcProcess: fcs error %x:%x,callen:%d\n",
+                buf[onePktLen-1], fcs,onePktLen-SOF_LEN-FCS_LEN);
+        goto END;
+    }
+
+    pkt->head=buf;
+    pkt->pktSize=onePktLen;
+
+END:
+    return readLen;
+}
 /*************************************************************************************************
  * @fn      rpcProcess()
  *
@@ -267,152 +337,247 @@ void rpcForceRun(void)
  *************************************************************************************************/
 int32_t rpcProcess(void)
 {
-	uint8_t rpcLen, rpcTempLen, bytesRead, sofByte, rpcBuffIdx;
-	uint8_t retryAttempts = 0, len, rpcBuff[RPC_MAX_LEN];
-	uint8_t fcs;
+    unsigned char buf[RPC_MAX_LEN];
+    time_t pktHold=0;
+    int totalSize=0;
+
+    while(1){
+        uint8_t d;
+        int len = rpcTransportRead( &d, 1 );
+        if ( len>0 ){
+            debugf("0x%02x\n",d);
+            if (totalSize>=RPC_MAX_LEN){
+                errf("uart buffer is full clean it\n");
+                totalSize=0;
+            }
+            buf[totalSize]=d;
+            pktHold=time(0);
+            totalSize += len;
+        }
+        pkt_t pkt;
+        int ret = collectPacket( &pkt, buf , totalSize );
+        if (ret>0){
+            infof("processing %d\n",ret);
+            totalSize-=ret;
+        }
+
+        if (pkt.head==0){
+            if ( pktHold > 0 && (time(0)-pktHold) > 3){
+                totalSize=0;
+            }
+            continue;
+        }
+
+        int rpcLen=pkt.head[1];
+        char cmd0,cmd1;
+
+        cmd0=pkt.head[2];
+        cmd1=pkt.head[3];
+
+        if ((cmd0 & MT_RPC_CMD_TYPE_MASK) == MT_RPC_CMD_SRSP)
+        {
+            // SRSP command ID deteced
+            if (expectedSrspCmdId == (cmd0 & MT_RPC_SUBSYSTEM_MASK))
+            {
+                dbg_print(PRINT_LEVEL_INFO,
+                        "rpcProcess: processing expected srsp [0x%02X]\n",
+                        cmd0 & MT_RPC_SUBSYSTEM_MASK);
+
+                //unblock waiting sreq
+                sem_post(&srspSem);
+
+                dbg_print(PRINT_LEVEL_INFO,
+                        "rpcProcess: writing %d bytes SRSP to head of the queue\n",
+                        rpcLen);
+
+                // send message to queue
+                llq_add(&rpcLlq, (char*) &pkt.head[2], rpcLen, 1);
+            }
+            else
+            {
+                // unexpected SRSP discard
+                dbg_print(PRINT_LEVEL_WARNING,
+                        "rpcProcess: UNEXPECTED SREQ!: %02X%02X",
+                        expectedSrspCmdId,
+                        (cmd0 & MT_RPC_SUBSYSTEM_MASK));
+                continue;
+            }
+        }
+        else
+        {
+            // should be AREQ frame
+            dbg_print(PRINT_LEVEL_INFO,
+                    "rpcProcess: writing %d bytes AREQ to tail of the que\n",
+                    rpcLen);
+
+            // send message to queue
+            llq_add(&rpcLlq, (char*) &pkt.head[2], rpcLen, 0);
+        }
+    }
+    return 0;
+}
+#else
+
+/*************************************************************************************************
+ * @fn      rpcProcess()
+ *
+ * @brief   Read bytes from transport layer and form an RPC frame
+ *
+ * @param   none
+ *
+ * @return  length of current Rx Buffer
+ *************************************************************************************************/
+int32_t rpcProcess(void)
+{
+    uint8_t rpcLen, rpcTempLen, bytesRead, sofByte, rpcBuffIdx;
+    uint8_t retryAttempts = 0, len, rpcBuff[RPC_MAX_LEN];
+    uint8_t fcs;
 
 #ifndef HAL_UART_IP //No SOF for IP	//read first byte and check it is a SOF
-	bytesRead = rpcTransportRead(&sofByte, 1);
+    bytesRead = rpcTransportRead(&sofByte, 1);
 
-	if ((sofByte == MT_RPC_SOF) && (bytesRead == 1))
+    if ((sofByte == MT_RPC_SOF) && (bytesRead == 1))
 #endif
-	{
-		// clear retry counter
-		retryAttempts = 0;
+    {
+        // clear retry counter
+        retryAttempts = 0;
 
-		// read length byte
-		bytesRead = rpcTransportRead(&rpcLen, 1);
+        // read length byte
+        bytesRead = rpcTransportRead(&rpcLen, 1);
 
-		if (bytesRead == 1)
-		{
-			len = rpcLen;
-			rpcBuff[0] = rpcLen;
+        if (bytesRead == 1)
+        {
+            len = rpcLen;
+            rpcBuff[0] = rpcLen;
 
 #ifdef HAL_UART_IP //No FCS for IP			//allocating RPC payload (+ cmd0, cmd1)
-			rpcLen += RPC_CMD0_FIELD_LEN + RPC_CMD1_FIELD_LEN;
+            rpcLen += RPC_CMD0_FIELD_LEN + RPC_CMD1_FIELD_LEN;
 #else
-			//allocating RPC payload (+ cmd0, cmd1 and fcs)
-			rpcLen +=
-			RPC_CMD0_FIELD_LEN + RPC_CMD1_FIELD_LEN + RPC_UART_FCS_LEN;
+            //allocating RPC payload (+ cmd0, cmd1 and fcs)
+            rpcLen +=
+            RPC_CMD0_FIELD_LEN + RPC_CMD1_FIELD_LEN + RPC_UART_FCS_LEN;
 #endif
 
-			//non blocking read, so we need to wait for the rpc to be read
-			rpcBuffIdx = 1;
-			rpcTempLen = rpcLen;
-			while (rpcTempLen > 0)
-			{
-				// read RPC frame
-				bytesRead = rpcTransportRead(&(rpcBuff[rpcBuffIdx]),
-				        rpcTempLen);
+            //non blocking read, so we need to wait for the rpc to be read
+            rpcBuffIdx = 1;
+            rpcTempLen = rpcLen;
+            while (rpcTempLen > 0)
+            {
+                // read RPC frame
+                bytesRead = rpcTransportRead(&(rpcBuff[rpcBuffIdx]),
+                        rpcTempLen);
 
-				// check for error
-				if (bytesRead > rpcTempLen)
-				{
-					//there was an error
-					dbg_print(PRINT_LEVEL_WARNING,
-					        "rpcProcess: read of %d bytes failed - %s\n",
-					        rpcTempLen, strerror(errno));
+                // check for error
+                if (bytesRead > rpcTempLen)
+                {
+                    //there was an error
+                    dbg_print(PRINT_LEVEL_WARNING,
+                            "rpcProcess: read of %d bytes failed - %s\n",
+                            rpcTempLen, strerror(errno));
 
-					// check whether retry limits has been reached
-					if (retryAttempts++ < 5)
-					{
-						// sleep for 10ms
-						usleep(10000);
+                    // check whether retry limits has been reached
+                    if (retryAttempts++ < 5)
+                    {
+                        // sleep for 10ms
+                        usleep(10000);
 
-						// try again
-						bytesRead = 0;
-					}
-					else
-					{
-						// something went wrong, abort
-						dbg_print(PRINT_LEVEL_ERROR,
-						        "rpcProcess: transport read failed too many times\n");
+                        // try again
+                        bytesRead = 0;
+                    }
+                    else
+                    {
+                        // something went wrong, abort
+                        dbg_print(PRINT_LEVEL_ERROR,
+                                "rpcProcess: transport read failed too many times\n");
 
-						return -1;
-					}
-				}
+                        return -1;
+                    }
+                }
 
-				// update counters
-				if (rpcTempLen > bytesRead)
-				{
-					rpcTempLen -= bytesRead;
-				}
-				else
-				{
-					rpcTempLen = 0;
-				}
-				rpcBuffIdx += bytesRead;
-			}
+                // update counters
+                if (rpcTempLen > bytesRead)
+                {
+                    rpcTempLen -= bytesRead;
+                }
+                else
+                {
+                    rpcTempLen = 0;
+                }
+                rpcBuffIdx += bytesRead;
+            }
 
-			// print out incoming RPC frame
-			printRpcMsg("SOC IN  <--", MT_RPC_SOF, len, &rpcBuff[1]);
+            // print out incoming RPC frame
+            printRpcMsg("SOC IN  <--", MT_RPC_SOF, len, &rpcBuff[1]);
 
-			//Verify FCS of incoming MT frames
-			fcs = calcFcs(&rpcBuff[0], (len + 3));
-			if (rpcBuff[len + 3] != fcs)
-			{
-				dbg_print(PRINT_LEVEL_WARNING, "rpcProcess: fcs error %x:%x\n",
-				        rpcBuff[len + 3], fcs);
-				return -1;
-			}
+            //Verify FCS of incoming MT frames
+            fcs = calcFcs(&rpcBuff[0], (len + 3));
+            if (rpcBuff[len + 3] != fcs)
+            {
+                dbg_print(PRINT_LEVEL_WARNING, "rpcProcess: fcs error %x:%x\n",
+                        rpcBuff[len + 3], fcs);
+                return -1;
+            }
 
-			if ((rpcBuff[1] & MT_RPC_CMD_TYPE_MASK) == MT_RPC_CMD_SRSP)
-			{
-				// SRSP command ID deteced
-				if (expectedSrspCmdId == (rpcBuff[1] & MT_RPC_SUBSYSTEM_MASK))
-				{
-					dbg_print(PRINT_LEVEL_INFO,
-					        "rpcProcess: processing expected srsp [%02X]\n",
-					        rpcBuff[1] & MT_RPC_SUBSYSTEM_MASK);
+            if ((rpcBuff[1] & MT_RPC_CMD_TYPE_MASK) == MT_RPC_CMD_SRSP)
+            {
+                // SRSP command ID deteced
+                if (expectedSrspCmdId == (rpcBuff[1] & MT_RPC_SUBSYSTEM_MASK))
+                {
+                    dbg_print(PRINT_LEVEL_INFO,
+                            "rpcProcess: processing expected srsp [%02X]\n",
+                            rpcBuff[1] & MT_RPC_SUBSYSTEM_MASK);
 
-					//unblock waiting sreq
-					sem_post(&srspSem);
+                    //unblock waiting sreq
+                    sem_post(&srspSem);
 
-					dbg_print(PRINT_LEVEL_INFO,
-					        "rpcProcess: writing %d bytes SRSP to head of the queue\n",
-					        rpcLen);
+                    dbg_print(PRINT_LEVEL_INFO,
+                            "rpcProcess: writing %d bytes SRSP to head of the queue\n",
+                            rpcLen);
 
-					// send message to queue
-					llq_add(&rpcLlq, (char*) &rpcBuff[1], rpcLen, 1);
-				}
-				else
-				{
-					// unexpected SRSP discard
-					dbg_print(PRINT_LEVEL_WARNING,
-                            "rpcProcess: UNEXPECTED SREQ!: %02X%02X",
-					        expectedSrspCmdId,
-					        (rpcBuff[1] & MT_RPC_SUBSYSTEM_MASK));
-					return 0;
-				}
-			}
-			else
-			{
-				// should be AREQ frame
-				dbg_print(PRINT_LEVEL_INFO,
-				        "rpcProcess: writing %d bytes AREQ to tail of the que\n",
-				        rpcLen);
+                    // send message to queue
+                    llq_add(&rpcLlq, (char*) &rpcBuff[1], rpcLen, 1);
+                }
+                else
+                {
+                    // unexpected SRSP discard
+                    dbg_print(PRINT_LEVEL_WARNING,
+                            "rpcProcess: UNEXPECTED SREQ!: %02X:%02X",
+                            expectedSrspCmdId,
+                            (rpcBuff[1] & MT_RPC_SUBSYSTEM_MASK));
+                    return 0;
+                }
+            }
+            else
+            {
+                // should be AREQ frame
+                dbg_print(PRINT_LEVEL_INFO,
+                        "rpcProcess: writing %d bytes AREQ to tail of the que\n",
+                        rpcLen);
 
-				// send message to queue
-				llq_add(&rpcLlq, (char*) &rpcBuff[1], rpcLen, 0);
-			}
+                // send message to queue
+                llq_add(&rpcLlq, (char*) &rpcBuff[1], rpcLen, 0);
+            }
 
-			return 0;
-		}
-		else
-		{
-			dbg_print(PRINT_LEVEL_WARNING, "rpcProcess: Len Not read [%x]\n",
-			        bytesRead);
-		}
-	}
-	else
-	{
-        dbg_print(PRINT_LEVEL_VERBOSE,
-		        "rpcProcess: No valid Start Of Frame found [%x:%x]\n", sofByte,
-		        bytesRead);
-	}
+            return 0;
+        }
+        else
+        {
+            dbg_print(PRINT_LEVEL_WARNING, "rpcProcess: Len Not read [%x]\n",
+                    bytesRead);
+        }
+    }
+    else
+    {
+        dbg_print(PRINT_LEVEL_WARNING,
+                "rpcProcess: No valid Start Of Frame found [%x:%x]\n", sofByte,
+                bytesRead);
+    }
 
-	return -1;
+    return -1;
 }
+
+#endif
+
 
 /*************************************************************************************************
  * @fn      sendRpcFrame()
@@ -466,13 +631,13 @@ uint8_t rpcSendFrame(uint8_t cmd0, uint8_t cmd1, uint8_t *payload,
 #endif
 
 	// print out message to be sent
-	printRpcMsg("SOC OUT -->", buf[0], payload_len, &buf[2]);
+    print_hexdump("uart send",buf,payload_len+5);
 
 	// wait for SRSP if necessary
 	if ((cmd0 & MT_RPC_CMD_TYPE_MASK) == MT_RPC_CMD_SREQ)
     {
-		dbg_print(PRINT_LEVEL_INFO, "rpcSendFrame: waiting for SRSP [%02x]\n",
-		        expectedSrspCmdId);
+        dbg_print(PRINT_LEVEL_INFO, "rpcSendFrame: waiting for SRSP [%02x]\n",
+                expectedSrspCmdId);
 
 		//Wait for the SRSP
         status = sem_timedwait(&srspSem, SRSP_TIMEOUT_MS );
@@ -543,7 +708,7 @@ static void printRpcMsg(char* preMsg, uint8_t sof, uint8_t len, uint8_t *msg)
 	// print headers
     dbg_print(PRINT_LEVEL_INFO,
 	        "%s %d Bytes: SOF:%02X, Len:%02X, CMD0:%02X, CMD1:%02X, Payload:",
-	        preMsg, len + 5, sof, len, msg[0], msg[1]);
+            preMsg, len + 4, sof, len, msg[0], msg[1]);
     if (len>2){
         print_hexdump("znp",msg,len);
     }

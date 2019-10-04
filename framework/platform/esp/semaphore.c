@@ -90,7 +90,9 @@ int sem_close(sem_t *sem)
 int sem_init(sem_t *sem, int pshared, unsigned int value)
 {
 	int ret = 0;
-    (*sem) = xSemaphoreCreateMutex();
+ //   (*sem) = xSemaphoreCreateMutex();
+    (*sem) = xSemaphoreCreateCounting(10,value);
+
 	if (*sem == NULL)
 	{
 		// error

@@ -174,11 +174,10 @@ void rpcTransportWrite(uint8_t* buf, uint8_t len)
  */
 uint8_t rpcTransportRead(uint8_t* buf, uint8_t len)
 {
-    uint8_t ret = uart_read_bytes(UART_NUM_0, buf, len, 50 / portTICK_RATE_MS);
+    uint8_t ret = uart_read_bytes(UART_NUM_0, buf, len, 1000 / portTICK_RATE_MS);
 	if (ret > 0)
 	{
-		dbg_print(PRINT_LEVEL_VERBOSE, "rpcTransportRead: read %d bytes\n",
-		        ret);
+    //	dbg_print(PRINT_LEVEL_VERBOSE, "rpcTransportRead: read %d bytes\n",ret);
 	}
 	return (ret);
 
