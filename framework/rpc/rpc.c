@@ -210,19 +210,13 @@ int32_t rpcWaitMqClientMsg(uint32_t timeout)
 {
 	uint8_t rpcFrame[RPC_MAX_LEN + 1];
 	int32_t rpcLen, timeLeft = 0, mBefTime, mAftTime;
-	struct timespec to;
-	struct timeval befTime, aftTime;
-	// calculate timeout
-	to.tv_sec = time(0) + (timeout / 1000);
-	to.tv_nsec = (long) ((long) timeout % 1000) * 1000000L;
 
-	dbg_print(PRINT_LEVEL_INFO, "rpcWaitMqClientMsg: timeout=%d\n", timeout);
-	dbg_print(PRINT_LEVEL_INFO,
-	        "rpcWaitMqClientMsg: waiting on queue %d:%d:%d\n", timeout,
-	        to.tv_sec, to.tv_nsec);
+    struct timeval befTime, aftTime;
 
-	gettimeofday(&befTime, NULL);
-	rpcLen = llq_timedreceive(&rpcLlq, (char *) rpcFrame, RPC_MAX_LEN + 1, &to);
+    dbg_print(PRINT_LEVEL_INFO, "rpcWaitMqClientMsg: timeout=%d\n", timeout);
+
+    gettimeofday(&befTime, NULL);
+    rpcLen = llq_timedreceive(&rpcLlq, (char *) rpcFrame, RPC_MAX_LEN + 1, timeout);
 	gettimeofday(&aftTime, NULL);
 	if (rpcLen != -1)
 	{
@@ -279,7 +273,7 @@ int32_t rpcProcess(void)
 	uint8_t retryAttempts = 0, len, rpcBuff[RPC_MAX_LEN];
 	uint8_t fcs;
 
-#ifndef HAL_UART_IP //No SOF for IP	//read first byte and check it is a SOF
+#ifndef HAL_UART_IP //No SOF for IP	//read first byte and check it is a SOF
 	bytesRead = rpcTransportRead(&sofByte, 1);
 
 	if ((sofByte == MT_RPC_SOF) && (bytesRead == 1))
@@ -296,7 +290,7 @@ int32_t rpcProcess(void)
 			len = rpcLen;
 			rpcBuff[0] = rpcLen;
 
-#ifdef HAL_UART_IP //No FCS for IP			//allocating RPC payload (+ cmd0, cmd1)
+#ifdef HAL_UART_IP //No FCS for IP			//allocating RPC payload (+ cmd0, cmd1)
 			rpcLen += RPC_CMD0_FIELD_LEN + RPC_CMD1_FIELD_LEN;
 #else
 			//allocating RPC payload (+ cmd0, cmd1 and fcs)
@@ -387,7 +381,7 @@ int32_t rpcProcess(void)
 				{
 					// unexpected SRSP discard
 					dbg_print(PRINT_LEVEL_WARNING,
-					        "rpcProcess: UNEXPECTED SREQ!: %02X%s:%02X%s",
+                            "rpcProcess: UNEXPECTED SREQ!: %02X%02X",
 					        expectedSrspCmdId,
 					        (rpcBuff[1] & MT_RPC_SUBSYSTEM_MASK));
 					return 0;
@@ -556,18 +550,18 @@ static void printRpcMsg(char* preMsg, uint8_t sof, uint8_t len, uint8_t *msg)
 	uint8_t i;
 
 	// print headers
-	dbg_print(PRINT_LEVEL_INFO_LOWLEVEL,
+    dbg_print(PRINT_LEVEL_INFO,
 	        "%s %d Bytes: SOF:%02X, Len:%02X, CMD0:%02X, CMD1:%02X, Payload:",
 	        preMsg, len + 5, sof, len, msg[0], msg[1]);
 
 	// print frame payload
 	for (i = 2; i < len + 2; i++)
 	{
-		dbg_print(PRINT_LEVEL_INFO_LOWLEVEL, "%02X%s", msg[i],
+        dbg_print(PRINT_LEVEL_INFO, "%02X%s", msg[i],
 		        i < (len + 2 - 1) ? ":" : ",");
 	}
 
 	// print FCS
-	dbg_print(PRINT_LEVEL_INFO_LOWLEVEL, " FCS:%02X\n", msg[i]);
+    dbg_print(PRINT_LEVEL_INFO, " FCS:%02X\n", msg[i]);
 
 }

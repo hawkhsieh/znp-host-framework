@@ -127,7 +127,7 @@ void llq_close(llq_t *hndl)
  * @return   length of message read from queue
  */
 int llq_timedreceive(llq_t *hndl, char *buffer, int maxLength,
-        const struct timespec * timeout)
+        const uint32_t timeout)
 {
 	int rLength = 0, sepmRnt;
 

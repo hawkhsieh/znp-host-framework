@@ -36,8 +36,8 @@
  *
  */
 
-#ifndef QUEUE_H
-#define QUEUE_H
+#ifndef ZNP_QUEUE_H
+#define ZNP_QUEUE_H
 
 #ifdef __cplusplus
 extern "C"
@@ -132,10 +132,10 @@ extern int llq_receive(llq_t *hndl, char *buffer, int maxLength);
  * @return   length of message read from queue
  */
 extern int llq_timedreceive(llq_t *hndl, char *buffer, int maxLength,
-        const struct timespec * timeout);
+        const uint32_t timeout);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* SEMAPHORE_H */
+#endif /* QUEUE_H */

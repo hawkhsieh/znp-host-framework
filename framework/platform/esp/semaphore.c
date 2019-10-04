@@ -41,20 +41,12 @@
  */
 
 #include <errno.h>
-
-/* XDCtools Header files */
-#include <xdc/std.h>
-#include <xdc/cfg/global.h>
-#include <xdc/runtime/Error.h>
-#include <xdc/runtime/System.h>
-#include <xdc/runtime/Memory.h>
-
-/* BIOS Header files */
-#include <ti/sysbios/BIOS.h>
-#include <ti/sysbios/knl/Clock.h>
-#include <ti/sysbios/heaps/HeapMem.h>
-
+#include <stdint.h>
 #include "semaphore.h"
+
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 
 /*********************************************************************
  * MACROS
@@ -79,7 +71,7 @@
 /*********************************************************************
  * LOCAL FUNCTIONS DECLARATIONS
  */
-static int sem_pend(sem_t * sem, UInt timeout);
+static int sem_pend(sem_t * sem, uint32_t timeout);
 
 /*********************************************************************
  * API FUNCTIONS
@@ -87,59 +79,18 @@ static int sem_pend(sem_t * sem, UInt timeout);
 
 sem_t *sem_open(const char *name, int oflag)
 {
-	sem_t* sem;
-	Error_Block eb;
-
-	// init error block
-	Error_init(&eb);
-
-	// allocate memory for handle
-	sem = (sem_t *) Memory_alloc(NULL, sizeof(Semaphore_Handle), 0, &eb);
-	if (sem == NULL)
-	{
-		// set error
-		sem = SEM_FAILED;
-
-		// set errno
-		errno = ENOMEM;
-	}
-
-	return sem;
+    return 0;
 }
 
 int sem_close(sem_t *sem)
 {
-	int ret = -1;
-
-	if (sem != SEM_FAILED)
-	{
-		// free memory
-		Memory_free(NULL, sem, sizeof(Semaphore_Handle));
-
-		// return success
-		ret = 0;
-	}
-	else
-	{
-		// set errno
-		errno = EINVAL;
-	}
-
-	return ret;
+    return 0;
 }
 
 int sem_init(sem_t *sem, int pshared, unsigned int value)
 {
 	int ret = 0;
-	Semaphore_Params params;
-	Error_Block eb;
-
-	// init params
-	Semaphore_Params_init(&params);
-	Error_init(&eb);
-
-	// create semaphore instance
-	(*sem) = Semaphore_create((Int) value, &params, &eb);
+    (*sem) = xSemaphoreCreateCounting(10,0);
 	if (*sem == NULL)
 	{
 		// error
@@ -159,7 +110,7 @@ int sem_destroy(sem_t *sem)
 	if (sem != SEM_FAILED)
 	{
 		// just delete semaphore
-		Semaphore_delete(sem);
+        vSemaphoreDelete(*sem);
 
 		// return success
 		ret = 0;
@@ -175,17 +126,11 @@ int sem_destroy(sem_t *sem)
 
 int sem_wait(sem_t * sem)
 {
-	return (sem_pend(sem, BIOS_WAIT_FOREVER));
+    return (sem_pend(sem, portMAX_DELAY));
 }
 
-int sem_timedwait(sem_t * sem, uint32_t abs_timeout)
+int sem_timedwait(sem_t * sem, uint32_t timeout)
 {
-    UInt timeout;
-
-    // calculate timeout
-    timeout = ((abs_timeout->tv_sec - time(0)) * (1000000UL / Clock_tickPeriod))
-            + (abs_timeout->tv_nsec / (Clock_tickPeriod * 1000UL));
-
 	return (sem_pend(sem, timeout));
 }
 
@@ -198,7 +143,7 @@ int sem_post(sem_t * sem)
 		//consolePrint("Semaphore_post++\n");
 
 		// post semaphore
-		Semaphore_post(*sem);
+        xSemaphoreGive( *sem );
 
 		// return success
 		ret = 0;
@@ -215,20 +160,15 @@ int sem_post(sem_t * sem)
 /*********************************************************************
  * LOCAL FUNCTIONS DEFINITIONS
  */
-static int sem_pend(sem_t * sem, UInt timeout)
+static int sem_pend(sem_t * sem, uint32_t timeout)
 {
 	int ret = -1;
 
 	if (sem != SEM_FAILED)
 	{
-		//consolePrint("Semaphore_pend(%d)++\n", timeout);
-		// wait for semaphore forever
-		if (Semaphore_pend(*sem, timeout) == TRUE)
-		{
-			//consolePrint("Semaphore_pend(%d)--\n");
-			// return success
-			ret = 0;
-		}
+        if ( xSemaphoreTake( *sem, timeout/portTICK_RATE_MS ) == pdFALSE ) return 0;
+
+        ret=0;
 	}
 	else
 	{
