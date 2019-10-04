@@ -408,7 +408,7 @@ int32_t rpcProcess(void)
 	}
 	else
 	{
-		dbg_print(PRINT_LEVEL_WARNING,
+        dbg_print(PRINT_LEVEL_VERBOSE,
 		        "rpcProcess: No valid Start Of Frame found [%x:%x]\n", sofByte,
 		        bytesRead);
 	}
@@ -472,17 +472,12 @@ uint8_t rpcSendFrame(uint8_t cmd0, uint8_t cmd1, uint8_t *payload,
 
 	// wait for SRSP if necessary
 	if ((cmd0 & MT_RPC_CMD_TYPE_MASK) == MT_RPC_CMD_SREQ)
-	{
-		// calculate timeout
-		struct timespec srspTimeOut =
-			{ time(0) + (SRSP_TIMEOUT_MS / 1000), (long) ((long) SRSP_TIMEOUT_MS
-			        % 1000) * 1000000 };
-
+    {
 		dbg_print(PRINT_LEVEL_INFO, "rpcSendFrame: waiting for SRSP [%02x]\n",
 		        expectedSrspCmdId);
 
 		//Wait for the SRSP
-		status = sem_timedwait(&srspSem, &srspTimeOut);
+        status = sem_timedwait(&srspSem, SRSP_TIMEOUT_MS );
 		if (status == -1)
 		{
 			dbg_print(PRINT_LEVEL_WARNING,
@@ -547,21 +542,11 @@ static uint8_t calcFcs(uint8_t *msg, uint8_t size)
  */
 static void printRpcMsg(char* preMsg, uint8_t sof, uint8_t len, uint8_t *msg)
 {
-	uint8_t i;
+    print_hexdump("znp",msg,len+5);
 
 	// print headers
     dbg_print(PRINT_LEVEL_INFO,
 	        "%s %d Bytes: SOF:%02X, Len:%02X, CMD0:%02X, CMD1:%02X, Payload:",
 	        preMsg, len + 5, sof, len, msg[0], msg[1]);
-
-	// print frame payload
-	for (i = 2; i < len + 2; i++)
-	{
-        dbg_print(PRINT_LEVEL_INFO, "%02X%s", msg[i],
-		        i < (len + 2 - 1) ? ":" : ",");
-	}
-
-	// print FCS
-    dbg_print(PRINT_LEVEL_INFO, " FCS:%02X\n", msg[i]);
 
 }

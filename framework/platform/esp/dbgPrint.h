@@ -54,11 +54,11 @@ enum
 
 #define dbg_print( printf_level,fmt, args...) \
     do{\
-    if ( printf_level == PRINT_LEVEL_INFO ){\
+    if ( printf_level >= PRINT_LEVEL_INFO ){\
         infof(fmt,##args);\
     }else if ( printf_level == PRINT_LEVEL_VERBOSE ){\
         debugf(fmt,##args);\
-    }else if ( printf_level >= PRINT_LEVEL_WARNING ){\
+    }else if ( printf_level == PRINT_LEVEL_ERROR ){\
         errf(fmt,##args);\
     }\
     }while(0);
