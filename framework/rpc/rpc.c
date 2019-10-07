@@ -170,7 +170,7 @@ int32_t rpcInitMq(void)
  */
 int32_t rpcGetMqClientMsg(void)
 {
-	uint8_t rpcFrame[RPC_MAX_LEN + 1];
+    uint8_t rpcFrame[RPC_MAX_LEN + 1];
 	int32_t rpcLen;
 
 	dbg_print(PRINT_LEVEL_INFO, "rpcWaitMqClient: waiting on queue\n");
@@ -188,7 +188,7 @@ int32_t rpcGetMqClientMsg(void)
 	}
 	else
 	{
-		dbg_print(PRINT_LEVEL_WARNING, "rpcWaitMqClient: Timeout\n");
+        dbg_print(PRINT_LEVEL_WARNING, "rpcWaitMqClient: Timeout\n");
 		return -1;
 	}
 
@@ -207,7 +207,12 @@ int32_t rpcGetMqClientMsg(void)
  */
 int32_t rpcWaitMqClientMsg(uint32_t timeout)
 {
-	uint8_t rpcFrame[RPC_MAX_LEN + 1];
+    uint8_t *rpcFrame=malloc(RPC_MAX_LEN + 1);
+    if (rpcFrame==0){
+        errf("malloc failed\n");
+        sleep(1);
+        return -1;
+    }
 	int32_t rpcLen, timeLeft = 0, mBefTime, mAftTime;
 
     struct timeval befTime, aftTime;
@@ -232,9 +237,11 @@ int32_t rpcWaitMqClientMsg(uint32_t timeout)
 	else
 	{
         dbg_print(PRINT_LEVEL_INFO, "rpcWaitMqClientMsg: Timed out [%d] - %s\n", rpcLen, strerror(errno));
+        free(rpcFrame);
 		return -1;
 	}
 
+    free(rpcFrame);
 	return timeLeft;
 }
 
@@ -592,13 +599,13 @@ int32_t rpcProcess(void)
 uint8_t rpcSendFrame(uint8_t cmd0, uint8_t cmd1, uint8_t *payload,
         uint8_t payload_len)
 {
-	uint8_t buf[RPC_MAX_LEN];
+    uint8_t *buf=malloc(RPC_MAX_LEN);
 	int32_t status = MT_RPC_SUCCESS;
 
 	// block here if SREQ is in progress
 	dbg_print(PRINT_LEVEL_INFO, "rpcSendFrame: Blocking on RPC sem\n");
 	sem_wait(&rpcSem);
-	dbg_print(PRINT_LEVEL_INFO, "rpcSendFrame: Sending RPC\n");
+    dbg_print(PRINT_LEVEL_INFO, "rpcSendFrame: Sending RPC,len:%d\n",payload_len);
 
 	// fill in header bytes
 	buf[0] = MT_RPC_SOF;
@@ -661,6 +668,7 @@ uint8_t rpcSendFrame(uint8_t cmd0, uint8_t cmd1, uint8_t *payload,
 	//Unlock RPC sem
 	sem_post(&rpcSem);
 
+    free(buf);
 	return status;
 }
 
