@@ -141,6 +141,9 @@ void rpcTransportWrite(uint8_t* buf, uint8_t len)
 	int remain = len;
 	int offset = 0;
 #if 1
+    uart_write_bytes(UART_NUM_0, (const char *) buf , len);
+
+    /*
 	dbg_print(PRINT_LEVEL_VERBOSE, "rpcTransportWrite : len = %d\n", len);
 
 	while (remain > 0)
@@ -151,10 +154,11 @@ void rpcTransportWrite(uint8_t* buf, uint8_t len)
 		        remain);
         uart_write_bytes(UART_NUM_0, (const char *) buf + offset, sub);
 
-		usleep(1000);
+        usleep(1000);
 		remain -= 8;
 		offset += 8;
 	}
+    */
 #else
 	write (serialPortFd, buf, len);
 	tcflush(serialPortFd, TCOFLUSH);

@@ -49,17 +49,13 @@ extern "C"
  * Ota COMMANDS
  ***************************************************************************************************/
 
-typedef struct
-{
-    uint8_t result;
-} OtaRsp_t;
 
-typedef uint8_t (*mtpfnOtaSrspCb_t)(OtaRsp_t *msg);
+typedef uint8_t (*mtpfnOtaFileReadCb_t)( int offset , uint8_t *data,  int dataLen );
 
 
 typedef struct
 {
-    mtpfnOtaSrspCb_t pfnOtaSrsp;
+    mtpfnOtaFileReadCb_t pfnOtaFileReadCb;
 } mtOtaCb_t;
 
 

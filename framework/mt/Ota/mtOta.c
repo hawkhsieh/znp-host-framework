@@ -39,8 +39,6 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
         switch(rpcBuff[1]){
         case MT_OTA_NEXT_IMG_REQ:
         {
-            /*+++++++++  From 2530 ++++++++++
-            ++++++++++++++++++++++++++++++++++*/
             zclOTA_FileID_t fid;
             afAddrType_t addr;
             p=OTA_StreamToFileId(&fid,p);
@@ -53,7 +51,9 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
 
             uint8_t *s=&rpcBuff[2];
             p=&rpcBuff[2];
-            fid.version++;
+         //   fid.version=0xbbbb;
+            fid.version=0xabcd;
+
             p=OTA_FileIdToStream(&fid,p);
             p=OTA_AfAddrToStream(&addr,p);
             *p++=0; //status
@@ -71,7 +71,7 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
             break;
         }
         case MT_OTA_FILE_READ_REQ:
-            infof("MT_OTA_FILE_READ_REQ\n");
+        {
 
             /*+++++++++  From 2530 ++++++++++
             // Add the file ID
@@ -88,26 +88,51 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
 
             *p = len;
             ++++++++++++++++++++++++++++++++++*/
+            infof("MT_OTA_FILE_READ_REQ\n");
+            zclOTA_FileID_t fid;
+            afAddrType_t addr;
+            p=OTA_StreamToFileId(&fid,p);
+            p=OTA_StreamToAfAddr(&addr,p);
+            uint16_t offset = BUILD_UINT32(p[0],p[1],p[2],p[3]);
+            p+=4;
+            uint8_t readLen=*p;
 
-            //copies sresp to local buffer
-            memcpy(srspRpcBuff, rpcBuff, rpcLen);
-            //srspRpcLen = rpcLen;
-            if ( mtOtaCbs.pfnOtaSrsp ){
-                OtaRsp_t msg = {
-                    .result=rpcBuff[1]
-                };
-                mtOtaCbs.pfnOtaSrsp(&msg);
-            }else{
-                dbg_print(PRINT_LEVEL_WARNING, "not handled\n");
+            infof("read offset:%d,readLen:%d\n",offset,readLen);
+
+            uint8_t *s=&rpcBuff[2];
+            p=&rpcBuff[2];
+            p=OTA_FileIdToStream(&fid,p);
+            p=OTA_AfAddrToStream(&addr,p);
+            *p++=0; //status
+            *p++ = BREAK_UINT32(offset, 0);
+            *p++ = BREAK_UINT32(offset, 1);
+            *p++ = BREAK_UINT32(offset, 2);
+            *p++ = BREAK_UINT32(offset, 3);
+            *p++ = readLen;
+            if ( mtOtaCbs.pfnOtaFileReadCb){
+                int ret=mtOtaCbs.pfnOtaFileReadCb(offset,p,readLen);
+                if (ret>=0){
+                    p+=ret;
+                    int status = rpcSendFrame(MT_RPC_SYS_OTA , MT_OTA_FILE_READ_RSP, s, p-s);
+                    infof("MT_OTA_FILE_READ_RSP:%d\n",status);
+                    break;
+                }else{
+                    infof("pfnOtaFileReadCb failed:%d\n",ret);
+                }
             }
-
-      //      status = rpcSendFrame(MT_RPC_SYS_OTA , MT_OTA_FILE_READ_RSP, rpcBuff, rpcLen);
-
+            infof("MT_OTA_FILE_READ_RSP not handled\n");
             break;
-
+        }
         case MT_OTA_STATUS_IND:
-            infof("MT_OTA_STATUS_IND\n");
+        {
+            uint8_t *p=&rpcBuff[2];
+            uint16_t panid = BUILD_UINT16(p[0],p[1]);
+            p+=2;
+            uint16_t shortaddr = BUILD_UINT16(p[0],p[1]);
+            p+=2;
+            infof("MT_OTA_STATUS_IND,panid:%04x,shortaddr:%04x,type:%02x,status:%02x,option:%02x\n",panid,shortaddr,p[0],p[1],p[2]);
             break;
+        }
         default:
             errf("OTA CMD0:%x, CMD1:%x, not handle\n",rpcBuff[0], rpcBuff[1]);
             break;
