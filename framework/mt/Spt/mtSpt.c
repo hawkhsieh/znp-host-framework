@@ -61,8 +61,22 @@ void sptProcess(uint8_t *rpcBuff, uint8_t rpcLen)
             dbg_print(PRINT_LEVEL_WARNING, "not handled\n");
         }
     }else if ((rpcBuff[0] & MT_RPC_CMD_TYPE_MASK) == MT_RPC_CMD_SREQ){
-        //Read CMD1 and processes the specific SREQ
-        errf("SPT SREQ CMD0:%x, CMD1:%x, not handle\n",rpcBuff[0], rpcBuff[1]);
+
+        print_hexdump("rpcBuff" , rpcBuff,rpcLen+2);
+
+
+        if ( mtSptCbs.pfnSptSreq ){
+            SptReq_t msg = {
+                .cmd=rpcBuff[1],
+                .data=&rpcBuff[2],
+                .dataLen=rpcLen,
+            };
+            mtSptCbs.pfnSptSreq(&msg);
+        }else{
+            dbg_print(PRINT_LEVEL_WARNING, "not handled\n");
+        }
+
+        rpcSendFrame((MT_RPC_CMD_SRSP | MT_RPC_SYS_SPT), mtSptCmdAPMode, 0, 0);
 
     }else{
         errf("SPT CMD0:%x, CMD1:%x, not handle\n",rpcBuff[0], rpcBuff[1]);

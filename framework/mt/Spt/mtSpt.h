@@ -49,17 +49,36 @@ extern "C"
  * SPT COMMANDS
  ***************************************************************************************************/
 
+typedef enum {
+    mtSptCmdAPMode=1,
+    mtSptCmdDiscover,
+    mtSptCmdJoin,
+
+}mtSptCmd;
+
+
 typedef struct
 {
     uint8_t result;
 } SptRsp_t;
 
+
+typedef struct
+{
+    mtSptCmd cmd;
+    uint8_t *data;
+    int dataLen;
+
+} SptReq_t;
+
 typedef uint8_t (*mtpfnSptSrspCb_t)(SptRsp_t *msg);
+typedef uint8_t (*mtpfnSptSreqCb_t)(SptReq_t *msg);
 
 
 typedef struct
 {
     mtpfnSptSrspCb_t pfnSptSrsp;
+    mtpfnSptSreqCb_t pfnSptSreq;
 } mtSptCb_t;
 
 /*MACROS*/

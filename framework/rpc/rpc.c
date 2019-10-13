@@ -410,8 +410,14 @@ int32_t rpcProcess(void)
                 continue;
             }
         }
-        else
-        {
+        else if ((cmd0 & MT_RPC_CMD_TYPE_MASK) == MT_RPC_CMD_SREQ){
+            // should be SREQ frame
+            dbg_print(PRINT_LEVEL_INFO,
+                    "rpcProcess: writing %d bytes SREQ to tail of the que\n",
+                    rpcLen);
+            llq_add(&rpcLlq, (char*) &pkt.head[2], rpcLen, 0);
+
+        }else{
             // should be AREQ frame
             dbg_print(PRINT_LEVEL_INFO,
                     "rpcProcess: writing %d bytes AREQ to tail of the que\n",
