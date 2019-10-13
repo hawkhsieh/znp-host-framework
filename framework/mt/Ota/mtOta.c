@@ -58,7 +58,7 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
             p=OTA_AfAddrToStream(&addr,p);
             *p++=0; //status
             *p++=0; //option
-            uint32_t size=1024;
+            uint32_t size=137068;
             *p++ = BREAK_UINT32(size, 0);
             *p++ = BREAK_UINT32(size, 1);
             *p++ = BREAK_UINT32(size, 2);

@@ -62,9 +62,6 @@ void sptProcess(uint8_t *rpcBuff, uint8_t rpcLen)
         }
     }else if ((rpcBuff[0] & MT_RPC_CMD_TYPE_MASK) == MT_RPC_CMD_SREQ){
 
-        print_hexdump("rpcBuff" , rpcBuff,rpcLen+2);
-
-
         if ( mtSptCbs.pfnSptSreq ){
             SptReq_t msg = {
                 .cmd=rpcBuff[1],

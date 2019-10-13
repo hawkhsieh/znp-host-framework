@@ -398,7 +398,7 @@ int32_t rpcProcess(void)
                         rpcLen);
 
                 // send message to queue
-                llq_add(&rpcLlq, (char*) &pkt.head[2], rpcLen, 1);
+                llq_add(&rpcLlq, (char*) &pkt.head[2], rpcLen+2, 1);
             }
             else
             {
@@ -415,7 +415,7 @@ int32_t rpcProcess(void)
             dbg_print(PRINT_LEVEL_INFO,
                     "rpcProcess: writing %d bytes SREQ to tail of the que\n",
                     rpcLen);
-            llq_add(&rpcLlq, (char*) &pkt.head[2], rpcLen, 0);
+            llq_add(&rpcLlq, (char*) &pkt.head[2], rpcLen+2, 0);
 
         }else{
             // should be AREQ frame
@@ -424,7 +424,7 @@ int32_t rpcProcess(void)
                     rpcLen);
 
             // send message to queue
-            llq_add(&rpcLlq, (char*) &pkt.head[2], rpcLen, 0);
+            llq_add(&rpcLlq, (char*) &pkt.head[2], rpcLen+2, 0);
         }
     }
     return 0;
