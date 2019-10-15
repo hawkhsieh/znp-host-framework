@@ -93,7 +93,7 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
             afAddrType_t addr;
             p=OTA_StreamToFileId(&fid,p);
             p=OTA_StreamToAfAddr(&addr,p);
-            uint16_t offset = BUILD_UINT32(p[0],p[1],p[2],p[3]);
+            uint32_t offset = BUILD_UINT32(p[0],p[1],p[2],p[3]);
             p+=4;
             uint8_t readLen=*p;
 
