@@ -58,7 +58,18 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
             p=OTA_AfAddrToStream(&addr,p);
             *p++=0; //status
             *p++=0; //option
-            uint32_t size=137068;
+
+            uint32_t size=0;
+
+            FILE *fp=fopen(OTAZB_FILEPATH,"r");
+            if (fp){
+                if ( fseek(fp, (size_t)0, SEEK_END) == 0 ){
+                    size=ftell(fp);
+                    infof("Got size:%u\n",size);
+                    fclose(fp);
+                }
+            }
+
             *p++ = BREAK_UINT32(size, 0);
             *p++ = BREAK_UINT32(size, 1);
             *p++ = BREAK_UINT32(size, 2);

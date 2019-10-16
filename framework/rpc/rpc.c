@@ -217,7 +217,7 @@ int32_t rpcWaitMqClientMsg(uint32_t timeout)
 
     struct timeval befTime, aftTime;
 
-    dbg_print(PRINT_LEVEL_INFO, "rpcWaitMqClientMsg: timeout=%d\n", timeout);
+    dbg_print(PRINT_LEVEL_VERBOSE, "rpcWaitMqClientMsg: timeout=%d\n", timeout);
 
     gettimeofday(&befTime, NULL);
     rpcLen = llq_timedreceive(&rpcLlq, (char *) rpcFrame, RPC_MAX_LEN + 1, timeout);
@@ -230,7 +230,7 @@ int32_t rpcWaitMqClientMsg(uint32_t timeout)
 		mAftTime += aftTime.tv_usec / 1000;
 		timeLeft = mAftTime - mBefTime;
 		timeLeft = timeout - timeLeft;
-        dbg_print(PRINT_LEVEL_INFO, "rpcWaitMqClientMsg: processing MT[%d]\n", rpcLen);
+        dbg_print(PRINT_LEVEL_VERBOSE, "rpcWaitMqClientMsg: processing MT[%d]\n", rpcLen);
 		// process incoming message
 		mtProcess(rpcFrame, rpcLen);
 	}
@@ -364,7 +364,7 @@ int32_t rpcProcess(void)
         pkt_t pkt;
         int ret = collectPacket( &pkt, buf , totalSize );
         if (ret>0){
-            infof("processing %d\n",ret);
+            debugf("processing %d\n",ret);
             totalSize-=ret;
         }
 
@@ -386,14 +386,14 @@ int32_t rpcProcess(void)
             // SRSP command ID deteced
             if (expectedSrspCmdId == (cmd0 & MT_RPC_SUBSYSTEM_MASK))
             {
-                dbg_print(PRINT_LEVEL_INFO,
+                dbg_print(PRINT_LEVEL_VERBOSE,
                         "rpcProcess: processing expected srsp [0x%02X]\n",
                         cmd0 & MT_RPC_SUBSYSTEM_MASK);
 
                 //unblock waiting sreq
                 sem_post(&srspSem);
 
-                dbg_print(PRINT_LEVEL_INFO,
+                dbg_print(PRINT_LEVEL_VERBOSE,
                         "rpcProcess: writing %d bytes SRSP to head of the queue\n",
                         rpcLen);
 
@@ -412,14 +412,14 @@ int32_t rpcProcess(void)
         }
         else if ((cmd0 & MT_RPC_CMD_TYPE_MASK) == MT_RPC_CMD_SREQ){
             // should be SREQ frame
-            dbg_print(PRINT_LEVEL_INFO,
+            dbg_print(PRINT_LEVEL_VERBOSE,
                     "rpcProcess: writing %d bytes SREQ to tail of the que\n",
                     rpcLen);
             llq_add(&rpcLlq, (char*) &pkt.head[2], rpcLen+2, 0);
 
         }else{
             // should be AREQ frame
-            dbg_print(PRINT_LEVEL_INFO,
+            dbg_print(PRINT_LEVEL_VERBOSE,
                     "rpcProcess: writing %d bytes AREQ to tail of the que\n",
                     rpcLen);
 
@@ -609,9 +609,9 @@ uint8_t rpcSendFrame(uint8_t cmd0, uint8_t cmd1, uint8_t *payload,
 	int32_t status = MT_RPC_SUCCESS;
 
 	// block here if SREQ is in progress
-	dbg_print(PRINT_LEVEL_INFO, "rpcSendFrame: Blocking on RPC sem\n");
+    dbg_print(PRINT_LEVEL_VERBOSE, "rpcSendFrame: Blocking on RPC sem\n");
 	sem_wait(&rpcSem);
-    dbg_print(PRINT_LEVEL_INFO, "rpcSendFrame: Sending RPC,len:%d\n",payload_len);
+    dbg_print(PRINT_LEVEL_VERBOSE, "rpcSendFrame: Sending RPC,len:%d\n",payload_len);
 
 	// fill in header bytes
 	buf[0] = MT_RPC_SOF;
