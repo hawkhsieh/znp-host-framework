@@ -52,13 +52,13 @@ extern "C"
 typedef enum {
     mtSptCmdAPMode=1,
     mtSptCmdDiscover,
-    mtSptCmdJoin,
-
+    mtSptCmdJoin
 }mtSptCmd;
 
 
 typedef struct
 {
+    mtSptCmd cmd;
     uint8_t result;
 } SptRsp_t;
 
@@ -93,7 +93,8 @@ void sptRegisterCallbacks(mtSptCb_t cbs);
 
 void sptProcess(uint8_t *rpcBuff, uint8_t rpcLen);
 
-void writeUartBuf(char *buf,int len);
+int writeUartBuf(char *buf,int len);
+
 #ifdef __cplusplus
 }
 #endif

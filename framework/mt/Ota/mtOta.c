@@ -45,10 +45,7 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
             p=OTA_StreamToAfAddr(&addr,p);
             p++;
             uint16_t hwver = BUILD_UINT16(p[0],p[1]);
-
-            print_hexdump("addr",addr.addr.extAddr,Z_EXTADDR_LEN);
-            infof("hwver:%d,fwver:%04x,endpoint:%02x\n",hwver,fid.version,addr.endPoint);
-
+            infof("hwver:%d,fwver:%04x,endpoint:%02x,shortAddr:%04x\n",hwver,fid.version,addr.endPoint,addr.addr.shortAddr);
             uint8_t *s=&rpcBuff[2];
             p=&rpcBuff[2];
          //   fid.version=0xbbbb;
@@ -56,25 +53,28 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
 
             p=OTA_FileIdToStream(&fid,p);
             p=OTA_AfAddrToStream(&addr,p);
-            *p++=0; //status
-            *p++=0; //option
 
             uint32_t size=0;
-
             FILE *fp=fopen(OTAZB_FILEPATH,"r");
             if (fp){
                 if ( fseek(fp, (size_t)0, SEEK_END) == 0 ){
                     size=ftell(fp);
                     infof("Got size:%u\n",size);
                     fclose(fp);
+                    *p++=0; //status
                 }
             }
-
+            *p++=1; //status
+            *p++=0; //option
             *p++ = BREAK_UINT32(size, 0);
             *p++ = BREAK_UINT32(size, 1);
             *p++ = BREAK_UINT32(size, 2);
             *p++ = BREAK_UINT32(size, 3);
             infof("MT_OTA_NEXT_IMG_REQ\n");
+
+            if ( mtOtaCbs.pfnOtaNextImgCb){
+                mtOtaCbs.pfnOtaNextImgCb();
+            }
 
             int status = rpcSendFrame(MT_RPC_SYS_OTA , MT_OTA_NEXT_IMG_RSP, s , p-s);
             infof("MT_OTA_NEXT_IMG_RSP:%d\n",status);
@@ -108,7 +108,7 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
             p+=4;
             uint8_t readLen=*p;
 
-            infof("read offset:%d,readLen:%d\n",offset,readLen);
+            infof("read offset:%d,readLen:%d,shortAddr:%04x\n",offset,readLen,addr.addr.shortAddr);
 
             uint8_t *s=&rpcBuff[2];
             p=&rpcBuff[2];

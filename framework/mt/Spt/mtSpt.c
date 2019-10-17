@@ -26,7 +26,7 @@ void sptRegisterCallbacks(mtSptCb_t cbs)
 
 
 
-void writeUartBuf(char *buf,int len){
+int writeUartBuf(char *buf,int len){
 
     uint8_t status;
     status = rpcSendFrame((MT_RPC_CMD_SREQ | MT_RPC_SYS_SPT),  0, (uint8_t*)buf,len);
@@ -34,9 +34,10 @@ void writeUartBuf(char *buf,int len){
     if (status == MT_RPC_SUCCESS)
     {
         rpcWaitMqClientMsg(50);
+        return srspRpcBuff[2]; //0: ok,1: failed
     }
 
-
+    return -1;
 }
 
 

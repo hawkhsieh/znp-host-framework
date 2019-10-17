@@ -51,11 +51,14 @@ extern "C"
 
 
 typedef uint8_t (*mtpfnOtaFileReadCb_t)( int offset , uint8_t *data,  int dataLen );
+typedef uint8_t (*mtpfnNextImgCb_t)();
 
 
 typedef struct
 {
     mtpfnOtaFileReadCb_t pfnOtaFileReadCb;
+    mtpfnNextImgCb_t pfnOtaNextImgCb;
+
 } mtOtaCb_t;
 
 
