@@ -3,6 +3,7 @@
 #include "asdLog.h"
 #include "rpc.h"
 #include "dbgPrint.h"
+#include "basic_packet.h"
 
 static mtSptCb_t mtSptCbs;
 extern uint8_t srspRpcBuff[RPC_MAX_LEN];
@@ -24,6 +25,9 @@ void sptRegisterCallbacks(mtSptCb_t cbs)
 
 
 
+void macbin2macstr_( const char* macstr ,const char *mac ){
+    sprintf(macstr,"%02X%02X%02X%02X%02X%02X%02X%02X", mac[0],mac[1],mac[2],mac[3],mac[4],mac[5],mac[6],mac[7]);
+}
 
 
 int writeUartBuf(char *buf,int len){
@@ -34,7 +38,19 @@ int writeUartBuf(char *buf,int len){
     if (status == MT_RPC_SUCCESS)
     {
         rpcWaitMqClientMsg(50);
-        return srspRpcBuff[2]; //0: ok,1: failed
+        uint8_t *data=&srspRpcBuff[2];
+        BPacket recvBPacket;
+        recvBPacket.head = (char *)data;
+        recvBPacket.mac = (char *)&data[4];
+        recvBPacket.data = (char *)&data[13];
+        recvBPacket.len = data[2];
+        recvBPacket.func = data[12];
+        recvBPacket.type = data[3];
+
+        char macstr[32];
+        macbin2macstr_(macstr,recvBPacket.mac);
+        infof("resp mac:%s result:%d\n",macstr,recvBPacket.data[0]);
+        return recvBPacket.data[0];
     }
 
     return -1;
@@ -55,7 +71,9 @@ void sptProcess(uint8_t *rpcBuff, uint8_t rpcLen)
 
         if ( mtSptCbs.pfnSptSrsp ){
             SptRsp_t msg = {
-                .result=rpcBuff[1]
+                .cmd1=rpcBuff[1],
+                .data=&rpcBuff[2],
+                .len=rpcLen-2,
             };
             mtSptCbs.pfnSptSrsp(&msg);
         }else{

@@ -58,8 +58,9 @@ typedef enum {
 
 typedef struct
 {
-    mtSptCmd cmd;
-    uint8_t result;
+    mtSptCmd cmd1;
+    uint8_t *data;
+    int len;
 } SptRsp_t;
 
 
