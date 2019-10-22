@@ -69,7 +69,7 @@
 #define SB_FORCE_BOOT              (0xF8)
 #define SB_FORCE_RUN               (SB_FORCE_BOOT ^ 0xFF)
 
-#define SRSP_TIMEOUT_MS            (2000) // 2000ms timeout
+#define SRSP_TIMEOUT_MS            (500) // 500ms timeout
 /*********************************************************************
  * GLOBAL VARIABLES
  */
