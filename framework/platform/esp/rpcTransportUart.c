@@ -100,7 +100,11 @@ int serialPortFd;
 int32_t rpcTransportOpen(char *_devicePath, uint32_t port)
 {
     uart_config_t uart_config = {
+    #ifndef CONFIG_CONSOLE_UART_BAUDRATE
         .baud_rate = 38400,
+#else
+        .baud_rate = CONFIG_CONSOLE_UART_BAUDRATE,
+    #endif
         .data_bits = UART_DATA_8_BITS,
         .parity    = UART_PARITY_DISABLE,
         .stop_bits = UART_STOP_BITS_1,
