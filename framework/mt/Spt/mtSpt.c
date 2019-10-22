@@ -37,7 +37,7 @@ int writeUartBuf(char *buf,int len){
 
     if (status == MT_RPC_SUCCESS)
     {
-        rpcWaitMqClientMsg(50);
+        rpcWaitMqClientMsg(1000);
         uint8_t *data=&srspRpcBuff[2];
         BPacket recvBPacket;
         recvBPacket.head = (char *)data;
