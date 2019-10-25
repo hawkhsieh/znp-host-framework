@@ -313,7 +313,7 @@ int collectPacket( pkt_t *pkt,uint8_t *buf , int dataLen ){
     if (dataLen < onePktLen){
         return readLen;
     }
-    print_hexdump("uart content",buf,dataLen);
+    print_hexdump("uart recv",buf,dataLen);
     readLen += onePktLen;
 
 #define SOF_LEN 1
@@ -344,7 +344,7 @@ END:
  *************************************************************************************************/
 int32_t rpcProcess(void)
 {
-    unsigned char buf[RPC_MAX_LEN];
+    unsigned char *buf=malloc(RPC_MAX_LEN);
     time_t pktHold=0;
     int totalSize=0;
 

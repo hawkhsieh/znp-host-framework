@@ -70,6 +70,8 @@ CRC               2个字节                    除去crc两个字节以外，�
 #define Fun_Dev_Reset                   0x06
 #define Fun_Dev_Light_Blink             0x07
 #define Fun_Dev_Alive                   0x08
+#define Fun_Dev_UnpairAll               0x09
+
 
 
 #define PACKET_SIZE 13

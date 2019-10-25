@@ -6,6 +6,7 @@
 #include "ota_common.h"
 #include "mtAf.h"
 #include "hal_defs.h"
+#include "rom/md5_hash.h"
 
 static mtOtaCb_t mtOtaCbs;
 extern uint8_t srspRpcBuff[RPC_MAX_LEN];
@@ -27,6 +28,19 @@ void otaRegisterCallbacks(mtOtaCb_t cbs)
 
 
 
+
+void md5( char *buf , int len ,unsigned char *digest, int reset , int final ){
+    static struct MD5Context ctx;
+    if (reset){
+        MD5Init(&ctx);
+    }
+    MD5Update(&ctx, (unsigned char*)buf, len);
+
+    if (final){
+        MD5Final(digest, &ctx);
+    }
+
+}
 
 
 void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
@@ -123,6 +137,34 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
             if ( mtOtaCbs.pfnOtaFileReadCb){
                 int ret=mtOtaCbs.pfnOtaFileReadCb(offset,p,readLen);
                 if (ret>=0){
+
+                    struct MD5Context ctx;
+                    MD5Init(&ctx);
+                    MD5Update(&ctx, (unsigned char*)p, ret);
+                    unsigned char digest[16];
+                    MD5Final(digest, &ctx);
+
+                    char calmd5='N';
+                    static int last_offset;
+                    if (last_offset != offset || offset==0){
+                        last_offset=offset;
+                        if (offset==0){
+                            md5((char*)p,ret,0,1,0);
+                            calmd5='1';
+                        }else {
+                            if (ret != readLen ){
+                                unsigned char digestfull[16];
+                                md5((char*)p,ret,digestfull,0,1);
+                                print_hexdump("md5",digestfull,16);
+                                calmd5='3';
+                            }else{
+                                md5((char*)p,ret,0,0,0);
+                                calmd5='2';
+                            }
+                        }
+                    }
+                    infof("state=%c,md5#%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x\n",calmd5,digest[0], digest[1], digest[2], digest[3], digest[4], digest[5], digest[6], digest[7], digest[8], digest[9], digest[10], digest[11], digest[12], digest[13], digest[14], digest[15] );
+
                     p+=ret;
                     int status = rpcSendFrame(MT_RPC_SYS_OTA , MT_OTA_FILE_READ_RSP, s, p-s);
                     infof("MT_OTA_FILE_READ_RSP:%d\n",status);
