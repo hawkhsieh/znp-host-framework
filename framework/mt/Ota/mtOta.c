@@ -45,7 +45,7 @@ void md5( char *buf , int len ,unsigned char *digest, int reset , int final ){
 
 void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
 {
-    dbg_print(PRINT_LEVEL_VERBOSE, "otaProcess: processing CMD0:%x, CMD1:%x\n",
+    dbg_print(PRINT_LEVEL_VERBOSE, "JACK otaProcess: processing CMD0:%x, CMD1:%x\n",
             rpcBuff[0], rpcBuff[1]);
     uint8_t *p=&rpcBuff[2];
     //process the synchronous SRSP from SREQ
@@ -63,14 +63,18 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
             uint8_t *s=&rpcBuff[2];
             p=&rpcBuff[2];
          //   fid.version=0xbbbb;
-            fid.version=0xabcd;
-
-            p=OTA_FileIdToStream(&fid,p);
-            p=OTA_AfAddrToStream(&addr,p);
+//            fid.version=0xabcd;
 
             uint32_t size=0;
             FILE *fp=fopen(OTAZB_FILEPATH,"r");
             if (fp){
+                if ( fseek(fp, (size_t)10, SEEK_SET) == 0 ){
+                   fread(&fid, 1, sizeof(zclOTA_FileID_t), fp);
+		}
+
+                p=OTA_FileIdToStream(&fid,p);
+                p=OTA_AfAddrToStream(&addr,p);
+
                 if ( fseek(fp, (size_t)0, SEEK_END) == 0 ){
                     size=ftell(fp);
                     infof("Got size:%u\n",size);
@@ -78,20 +82,21 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
                     *p++=0; //status
                 }
             }
-            *p++=1; //status
+
+//            *p++=1; //status
             *p++=0; //option
             *p++ = BREAK_UINT32(size, 0);
             *p++ = BREAK_UINT32(size, 1);
             *p++ = BREAK_UINT32(size, 2);
             *p++ = BREAK_UINT32(size, 3);
-            infof("MT_OTA_NEXT_IMG_REQ\n");
+            infof("JACK MT_OTA_NEXT_IMG_REQ\n");
 
             if ( mtOtaCbs.pfnOtaNextImgCb){
                 mtOtaCbs.pfnOtaNextImgCb();
             }
 
             int status = rpcSendFrame(MT_RPC_SYS_OTA , MT_OTA_NEXT_IMG_RSP, s , p-s);
-            infof("MT_OTA_NEXT_IMG_RSP:%d\n",status);
+            infof("JACK MT_OTA_NEXT_IMG_RSP:%d\n",status);
 
             break;
         }
@@ -113,7 +118,7 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
 
             *p = len;
             ++++++++++++++++++++++++++++++++++*/
-            infof("MT_OTA_FILE_READ_REQ\n");
+            infof("JACK MT_OTA_FILE_READ_REQ\n");
             zclOTA_FileID_t fid;
             afAddrType_t addr;
             p=OTA_StreamToFileId(&fid,p);
@@ -167,7 +172,7 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
 
                     p+=ret;
                     int status = rpcSendFrame(MT_RPC_SYS_OTA , MT_OTA_FILE_READ_RSP, s, p-s);
-                    infof("MT_OTA_FILE_READ_RSP:%d\n",status);
+                    infof("JACK MT_OTA_FILE_READ_RSP:%d\n",status);
                     break;
                 }else{
                     infof("pfnOtaFileReadCb failed:%d\n",ret);
@@ -183,7 +188,7 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
             p+=2;
             uint16_t shortaddr = BUILD_UINT16(p[0],p[1]);
             p+=2;
-            infof("MT_OTA_STATUS_IND,panid:%04x,shortaddr:%04x,type:%02x,status:%02x,option:%02x\n",panid,shortaddr,p[0],p[1],p[2]);
+            infof("JACK MT_OTA_STATUS_IND,panid:%04x,shortaddr:%04x,type:%02x,status:%02x,option:%02x\n",panid,shortaddr,p[0],p[1],p[2]);
             break;
         }
         default:
