@@ -173,7 +173,7 @@ int32_t rpcGetMqClientMsg(void)
     uint8_t rpcFrame[RPC_MAX_LEN + 1];
 	int32_t rpcLen;
 
-	dbg_print(PRINT_LEVEL_INFO, "rpcWaitMqClient: waiting on queue\n");
+//	dbg_print(PRINT_LEVEL_INFO, "JACK rpcWaitMqClient: waiting on queue\n");
 
 	// wait for incoming message queue
 	rpcLen = llq_receive(&rpcLlq, (char *) rpcFrame, RPC_MAX_LEN + 1);
@@ -183,6 +183,7 @@ int32_t rpcGetMqClientMsg(void)
 		dbg_print(PRINT_LEVEL_VERBOSE, "rpcWaitMqClient: processing MT[%d]\n",
 		        rpcLen);
 
+//	dbg_print(PRINT_LEVEL_INFO, "JACK rpcWaitMqClient: call mtProcess\n");
 		// process incoming message
 		mtProcess(rpcFrame, rpcLen);
 	}
@@ -217,7 +218,7 @@ int32_t rpcWaitMqClientMsg(uint32_t timeout)
 
     struct timeval befTime, aftTime;
 
-    dbg_print(PRINT_LEVEL_VERBOSE, "rpcWaitMqClientMsg: timeout=%d\n", timeout);
+//    dbg_print(PRINT_LEVEL_VERBOSE, "JACK rpcWaitMqClientMsg: timeout=%d\n", timeout);
 
     gettimeofday(&befTime, NULL);
     rpcLen = llq_timedreceive(&rpcLlq, (char *) rpcFrame, RPC_MAX_LEN + 1, timeout);
@@ -230,6 +231,7 @@ int32_t rpcWaitMqClientMsg(uint32_t timeout)
 		mAftTime += aftTime.tv_usec / 1000;
 		timeLeft = mAftTime - mBefTime;
 		timeLeft = timeout - timeLeft;
+//	dbg_print(PRINT_LEVEL_INFO, "JACK rpcWaitMqClientMsg: call mtProcess\n");
         dbg_print(PRINT_LEVEL_VERBOSE, "rpcWaitMqClientMsg: processing MT[%d]\n", rpcLen);
 		// process incoming message
 		mtProcess(rpcFrame, rpcLen);
@@ -313,7 +315,7 @@ int collectPacket( pkt_t *pkt,uint8_t *buf , int dataLen ){
     if (dataLen < onePktLen){
         return readLen;
     }
-    print_hexdump("uart recv",buf,dataLen);
+//    print_hexdump("JACK uart recv",buf,dataLen);
     readLen += onePktLen;
 
 #define SOF_LEN 1
@@ -350,6 +352,7 @@ int32_t rpcProcess(void)
 
     while(1){
         uint8_t d;
+//	dbg_print(PRINT_LEVEL_INFO, "JACK rpcProcess loop\n");
         int len = rpcTransportRead( &d, 1 );
         if ( len>0 ){
             debugf("0x%02x\n",d);
@@ -644,7 +647,7 @@ uint8_t rpcSendFrame(uint8_t cmd0, uint8_t cmd1, uint8_t *payload,
 #endif
 
 	// print out message to be sent
-    print_hexdump("uart send",buf,payload_len+5);
+//    print_hexdump("uart send",buf,payload_len+5);
 
 	// wait for SRSP if necessary
 	if ((cmd0 & MT_RPC_CMD_TYPE_MASK) == MT_RPC_CMD_SREQ)

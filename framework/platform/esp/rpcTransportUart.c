@@ -114,6 +114,7 @@ int32_t rpcTransportOpen(char *_devicePath, uint32_t port)
     uart_param_config(UART_NUM_0, &uart_config);
     uart_param_config(UART_NUM_1, &uart_config);
     uart_driver_install(UART_NUM_0, RPC_MAX_LEN,  RPC_MAX_LEN, 0, NULL);
+//    uart_driver_install(UART_NUM_0, RPC_MAX_LEN,  0, 0, NULL);
     return 0;
 }
 
@@ -139,13 +140,42 @@ void rpcTransportClose(void)
  * @param   fd - file descriptor of the UART device
  *
  * @return  status
- */
+ */ 
 void rpcTransportWrite(uint8_t* buf, uint8_t len)
 {
 	int remain = len;
 	int offset = 0;
 #if 1
-    uart_write_bytes(UART_NUM_0, (const char *) buf , len);
+//    infof("JACK rpcTransportWrite start\n");
+//    infof("JACK rpcTransportWrite: %02x %02x %02x len:%d\n", buf[0], buf[1], buf[2], len);
+//if(buf[0] == 0xfe && buf[1] == 0x11 && buf[2] == 0x36) {
+//    infof("JACK rpcTransportWrite return\n");
+//    return;
+//}
+
+/*int x;
+char str[2014];
+int index=0;
+sprintf (str, "JACK rpcTransportWrite:");
+for(x=0; x<len; x++) {
+	if(x!=0 && (x%16)==0) {
+	sprintf (str, "%s\n", str);
+	}
+sprintf (str, "%s %02x", str, buf[x]);
+}
+    infof("JACK rpcTransportWrite:%s  \n", str);*/
+//    infof("JACK rpcTransportWrite end\n");
+
+  //  for (size_t i = 0; i < len; ++i) {
+//        uart_tx_one_char(UART_NUM_0, *buf++);
+  //  }
+    uart_write_bytes(UART_NUM_0, (const char *) buf, len);
+    // added by cemox, wait for completion of transmission
+//    uart_flush(UART_NUM_0);
+//    infof("JACK rpcTransportWrite end\n");
+
+//    uart_write_bytes(UART_NUM_0, (const char *) buf , len);
+//    uart_flush(UART_NUM_0);
 
     /*
 	dbg_print(PRINT_LEVEL_VERBOSE, "rpcTransportWrite : len = %d\n", len);
@@ -185,7 +215,8 @@ uint8_t rpcTransportRead(uint8_t* buf, uint8_t len)
     uint8_t ret = uart_read_bytes(UART_NUM_0, buf, len, 1000 / portTICK_RATE_MS);
 	if (ret > 0)
 	{
-    //	dbg_print(PRINT_LEVEL_VERBOSE, "rpcTransportRead: read %d bytes\n",ret);
+//    infof("JACK rpcTransportRead: %02x read %d bytes\n", buf[0], ret);
+//    	dbg_print(PRINT_LEVEL_VERBOSE, "rpcTransportRead: read %d bytes\n",ret);
 	}
 	return (ret);
 

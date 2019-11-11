@@ -89,14 +89,14 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
             *p++ = BREAK_UINT32(size, 1);
             *p++ = BREAK_UINT32(size, 2);
             *p++ = BREAK_UINT32(size, 3);
-            infof("JACK MT_OTA_NEXT_IMG_REQ\n");
+//            infof("JACK MT_OTA_NEXT_IMG_REQ\n");
 
             if ( mtOtaCbs.pfnOtaNextImgCb){
                 mtOtaCbs.pfnOtaNextImgCb();
             }
 
             int status = rpcSendFrame(MT_RPC_SYS_OTA , MT_OTA_NEXT_IMG_RSP, s , p-s);
-            infof("JACK MT_OTA_NEXT_IMG_RSP:%d\n",status);
+//            infof("JACK MT_OTA_NEXT_IMG_RSP:%d\n",status);
 
             break;
         }
@@ -118,7 +118,7 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
 
             *p = len;
             ++++++++++++++++++++++++++++++++++*/
-            infof("JACK MT_OTA_FILE_READ_REQ\n");
+//            infof("JACK MT_OTA_FILE_READ_REQ\n");
             zclOTA_FileID_t fid;
             afAddrType_t addr;
             p=OTA_StreamToFileId(&fid,p);
@@ -168,11 +168,11 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
                             }
                         }
                     }
-                    infof("state=%c,md5#%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x\n",calmd5,digest[0], digest[1], digest[2], digest[3], digest[4], digest[5], digest[6], digest[7], digest[8], digest[9], digest[10], digest[11], digest[12], digest[13], digest[14], digest[15] );
+                    //infof("state=%c,md5#%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x\n",calmd5,digest[0], digest[1], digest[2], digest[3], digest[4], digest[5], digest[6], digest[7], digest[8], digest[9], digest[10], digest[11], digest[12], digest[13], digest[14], digest[15] );
 
                     p+=ret;
                     int status = rpcSendFrame(MT_RPC_SYS_OTA , MT_OTA_FILE_READ_RSP, s, p-s);
-                    infof("JACK MT_OTA_FILE_READ_RSP:%d\n",status);
+//                    infof("JACK MT_OTA_FILE_READ_RSP:%d\n",status);
                     break;
                 }else{
                     infof("pfnOtaFileReadCb failed:%d\n",ret);
