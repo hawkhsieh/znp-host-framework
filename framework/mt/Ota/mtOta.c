@@ -77,7 +77,7 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
 
                 if ( fseek(fp, (size_t)0, SEEK_END) == 0 ){
                     size=ftell(fp);
-                    infof("Got size:%u\n",size);
+                    debugf("Got size:%u\n",size);
                     fclose(fp);
                     *p++=0; //status
                 }
@@ -127,7 +127,7 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
             p+=4;
             uint8_t readLen=*p;
 
-            infof("read offset:%d,readLen:%d,shortAddr:%04x\n",offset,readLen,addr.addr.shortAddr);
+            debugf("read offset:%d,readLen:%d,shortAddr:%04x\n",offset,readLen,addr.addr.shortAddr);
 
             uint8_t *s=&rpcBuff[2];
             p=&rpcBuff[2];

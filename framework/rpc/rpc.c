@@ -315,7 +315,9 @@ int collectPacket( pkt_t *pkt,uint8_t *buf , int dataLen ){
     if (dataLen < onePktLen){
         return readLen;
     }
-//    print_hexdump("JACK uart recv",buf,dataLen);
+
+    if (IsDebufLevel()=='Y')
+        print_hexdump("JACK uart recv",buf,dataLen);
     readLen += onePktLen;
 
 #define SOF_LEN 1
@@ -352,10 +354,8 @@ int32_t rpcProcess(void)
 
     while(1){
         uint8_t d;
-//	dbg_print(PRINT_LEVEL_INFO, "JACK rpcProcess loop\n");
         int len = rpcTransportRead( &d, 1 );
         if ( len>0 ){
-            debugf("0x%02x\n",d);
             if (totalSize>=RPC_MAX_LEN){
                 errf("uart buffer is full clean it\n");
                 totalSize=0;
@@ -647,7 +647,8 @@ uint8_t rpcSendFrame(uint8_t cmd0, uint8_t cmd1, uint8_t *payload,
 #endif
 
 	// print out message to be sent
-//    print_hexdump("uart send",buf,payload_len+5);
+    if (IsDebufLevel()=='Y')
+        print_hexdump("uart send",buf,payload_len+5);
 
 	// wait for SRSP if necessary
 	if ((cmd0 & MT_RPC_CMD_TYPE_MASK) == MT_RPC_CMD_SREQ)
