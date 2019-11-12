@@ -653,7 +653,7 @@ uint8_t rpcSendFrame(uint8_t cmd0, uint8_t cmd1, uint8_t *payload,
 	// wait for SRSP if necessary
 	if ((cmd0 & MT_RPC_CMD_TYPE_MASK) == MT_RPC_CMD_SREQ)
     {
-        dbg_print(PRINT_LEVEL_INFO, "rpcSendFrame: waiting for SRSP [%02x]\n",
+        dbg_print(PRINT_LEVEL_VERBOSE, "rpcSendFrame: waiting for SRSP [%02x]\n",
                 expectedSrspCmdId);
 
 		//Wait for the SRSP
@@ -667,7 +667,7 @@ uint8_t rpcSendFrame(uint8_t cmd0, uint8_t cmd1, uint8_t *payload,
 		}
 		else
 		{
-			dbg_print(PRINT_LEVEL_INFO, "rpcSendFrame: Receive SRSP\n");
+            dbg_print(PRINT_LEVEL_VERBOSE, "rpcSendFrame: Receive SRSP\n");
 			status = MT_RPC_SUCCESS;
 		}
 

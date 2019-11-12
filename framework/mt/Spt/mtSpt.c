@@ -49,7 +49,7 @@ int writeUartBuf(char *buf,int len){
 
         char macstr[32];
         macbin2macstr_(macstr,recvBPacket.mac);
-        infof("resp mac:%s result:%d\n",macstr,recvBPacket.data[0]);
+        debugf("resp mac:%s result:%d\n",macstr,recvBPacket.data[0]);
         return recvBPacket.data[0];
     }
 
