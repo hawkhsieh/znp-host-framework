@@ -53,9 +53,10 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
         switch(rpcBuff[1]){
         case MT_OTA_NEXT_IMG_REQ:
         {
+            zclOTA_FileID_t curFid;
             zclOTA_FileID_t fid;
             afAddrType_t addr;
-            p=OTA_StreamToFileId(&fid,p);
+            p=OTA_StreamToFileId(&curFid,p);
             p=OTA_StreamToAfAddr(&addr,p);
             p++;
             uint16_t hwver = BUILD_UINT16(p[0],p[1]);
@@ -91,11 +92,17 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
             *p++ = BREAK_UINT32(size, 3);
 //            infof("JACK MT_OTA_NEXT_IMG_REQ\n");
 
-            if ( mtOtaCbs.pfnOtaNextImgCb){
-                mtOtaCbs.pfnOtaNextImgCb();
-            }
+            if(fid.version != curFid.version) {
+                if ( mtOtaCbs.pfnOtaNextImgCb){
+                    mtOtaCbs.pfnOtaNextImgCb();
+                }
 
-            int status = rpcSendFrame(MT_RPC_SYS_OTA , MT_OTA_NEXT_IMG_RSP, s , p-s);
+                int status = rpcSendFrame(MT_RPC_SYS_OTA , MT_OTA_NEXT_IMG_RSP, s , p-s);
+                debugf("MT_OTA_NEXT_IMG_RSP start update firmware");
+            }
+            else {
+                debugf("MT_OTA_NEXT_IMG_RSP the same firmware");
+            }
 //            infof("JACK MT_OTA_NEXT_IMG_RSP:%d\n",status);
 
             break;
