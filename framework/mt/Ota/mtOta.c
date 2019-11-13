@@ -42,7 +42,6 @@ void md5( char *buf , int len ,unsigned char *digest, int reset , int final ){
 
 }
 
-
 void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
 {
     dbg_print(PRINT_LEVEL_VERBOSE, "JACK otaProcess: processing CMD0:%x, CMD1:%x\n",
@@ -60,29 +59,41 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
             p=OTA_StreamToAfAddr(&addr,p);
             p++;
             uint16_t hwver = BUILD_UINT16(p[0],p[1]);
-            infof("hwver:%d,fwver:%04x,endpoint:%02x,shortAddr:%04x\n",hwver,fid.version,addr.endPoint,addr.addr.shortAddr);
             uint8_t *s=&rpcBuff[2];
             p=&rpcBuff[2];
          //   fid.version=0xbbbb;
 //            fid.version=0xabcd;
+            char *filepath=malloc(64);
+            if (mtOtaCbs.pfnGetFilePathCb(filepath,64,curFid.type)){
+                infof("No image available for type:%02x\n",curFid.type);
+                free(filepath);
+                break;
+            }
+            infof("hwver:%d,endpoint:%02x,shortAddr:%04x,devver:%04x,devtype:%02x,file:%s\n",hwver,addr.endPoint,addr.addr.shortAddr,curFid.version,curFid.type,filepath);
 
             uint32_t size=0;
-            FILE *fp=fopen(OTAZB_FILEPATH,"r");
-            if (fp){
-                if ( fseek(fp, (size_t)10, SEEK_SET) == 0 ){
-                   fread(&fid, 1, sizeof(zclOTA_FileID_t), fp);
-		}
+            FILE *fp=fopen(filepath,"r");
+            free(filepath);
+            if (fp==0){
+                errf("Open:%s failed\n",filepath);
+                break;
+            }
+
+            if ( fseek(fp, (size_t)10, SEEK_SET) == 0 ){
+                fread(&fid, 1, sizeof(zclOTA_FileID_t), fp);
 
                 p=OTA_FileIdToStream(&fid,p);
                 p=OTA_AfAddrToStream(&addr,p);
 
                 if ( fseek(fp, (size_t)0, SEEK_END) == 0 ){
                     size=ftell(fp);
-                    debugf("Got size:%u\n",size);
-                    fclose(fp);
                     *p++=0; //status
                 }
+                infof("fwver:%04x,fwtype:%02x,size:%d\n",fid.version,fid.type,size);
+            }else{
+                errf("fseek failed\n");
             }
+            fclose(fp);
 
 //            *p++=1; //status
             *p++=0; //option
@@ -98,10 +109,10 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
                 }
 
                 int status = rpcSendFrame(MT_RPC_SYS_OTA , MT_OTA_NEXT_IMG_RSP, s , p-s);
-                debugf("MT_OTA_NEXT_IMG_RSP start update firmware");
+                infof("MT_OTA_NEXT_IMG_RSP start update firmware\n");
             }
             else {
-                debugf("MT_OTA_NEXT_IMG_RSP the same firmware");
+                infof("MT_OTA_NEXT_IMG_RSP the same firmware\n");
             }
 //            infof("JACK MT_OTA_NEXT_IMG_RSP:%d\n",status);
 
@@ -134,7 +145,7 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
             p+=4;
             uint8_t readLen=*p;
 
-            debugf("read offset:%d,readLen:%d,shortAddr:%04x\n",offset,readLen,addr.addr.shortAddr);
+            debugf("read offset:%d,readLen:%d,shortAddr:%04x,type:%02x\n",offset,readLen,addr.addr.shortAddr,fid.type);
 
             uint8_t *s=&rpcBuff[2];
             p=&rpcBuff[2];
@@ -147,7 +158,7 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
             *p++ = BREAK_UINT32(offset, 3);
             *p++ = readLen;
             if ( mtOtaCbs.pfnOtaFileReadCb){
-                int ret=mtOtaCbs.pfnOtaFileReadCb(offset,p,readLen);
+                int ret=mtOtaCbs.pfnOtaFileReadCb(fid.type,offset,p,readLen);
                 if (ret>=0){
 
                     struct MD5Context ctx;

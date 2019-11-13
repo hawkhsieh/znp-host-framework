@@ -50,14 +50,21 @@ extern "C"
  ***************************************************************************************************/
 
 
-typedef uint8_t (*mtpfnOtaFileReadCb_t)( int offset , uint8_t *data,  int dataLen );
+typedef enum {
+    ZBDevTypeSwitch=0x11,
+    ZBDevTypeColorLamp=0x12,
+    ZBDevTypeWarmLamp=0x13
+}ZBDevType;
+typedef uint8_t (*mtpfnOtaFileReadCb_t)( ZBDevType type,int offset , uint8_t *data,  int dataLen );
 typedef uint8_t (*mtpfnNextImgCb_t)();
+typedef int (*mtpfnGetFilePath_t)(char *filepath , int filepathLen , ZBDevType type);
 
 
 typedef struct
 {
     mtpfnOtaFileReadCb_t pfnOtaFileReadCb;
     mtpfnNextImgCb_t pfnOtaNextImgCb;
+    mtpfnGetFilePath_t pfnGetFilePathCb;
 
 } mtOtaCb_t;
 
