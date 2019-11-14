@@ -87,15 +87,15 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
 
                 if ( fseek(fp, (size_t)0, SEEK_END) == 0 ){
                     size=ftell(fp);
-                    *p++=0; //status
                 }
                 infof("fwver:%04x,fwtype:%02x,size:%d\n",fid.version,fid.type,size);
+                *p++=0; //status
             }else{
                 errf("fseek failed\n");
+                *p++=1; //status
             }
             fclose(fp);
 
-//            *p++=1; //status
             *p++=0; //option
             *p++ = BREAK_UINT32(size, 0);
             *p++ = BREAK_UINT32(size, 1);
@@ -107,9 +107,8 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
                 if ( mtOtaCbs.pfnOtaNextImgCb){
                     mtOtaCbs.pfnOtaNextImgCb();
                 }
-
+                infof("MT_OTA_NEXT_IMG_RSP start update firmware,len:%d\n",p-s);
                 int status = rpcSendFrame(MT_RPC_SYS_OTA , MT_OTA_NEXT_IMG_RSP, s , p-s);
-                infof("MT_OTA_NEXT_IMG_RSP start update firmware\n");
             }
             else {
                 infof("MT_OTA_NEXT_IMG_RSP the same firmware\n");
@@ -160,7 +159,7 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
             if ( mtOtaCbs.pfnOtaFileReadCb){
                 int ret=mtOtaCbs.pfnOtaFileReadCb(fid.type,offset,p,readLen);
                 if (ret>=0){
-
+#if 0
                     struct MD5Context ctx;
                     MD5Init(&ctx);
                     MD5Update(&ctx, (unsigned char*)p, ret);
@@ -187,10 +186,11 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
                         }
                     }
                     //infof("state=%c,md5#%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x\n",calmd5,digest[0], digest[1], digest[2], digest[3], digest[4], digest[5], digest[6], digest[7], digest[8], digest[9], digest[10], digest[11], digest[12], digest[13], digest[14], digest[15] );
-
+#endif
                     p+=ret;
+
                     int status = rpcSendFrame(MT_RPC_SYS_OTA , MT_OTA_FILE_READ_RSP, s, p-s);
-//                    infof("JACK MT_OTA_FILE_READ_RSP:%d\n",status);
+                    infof("MT_OTA_FILE_READ_RSP status:%d,len:%d\n",status,p-s);
                     break;
                 }else{
                     infof("pfnOtaFileReadCb failed:%d\n",ret);
