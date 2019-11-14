@@ -107,8 +107,8 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
                 if ( mtOtaCbs.pfnOtaNextImgCb){
                     mtOtaCbs.pfnOtaNextImgCb();
                 }
-                infof("MT_OTA_NEXT_IMG_RSP start update firmware,len:%d\n",p-s);
                 int status = rpcSendFrame(MT_RPC_SYS_OTA , MT_OTA_NEXT_IMG_RSP, s , p-s);
+                infof("MT_OTA_NEXT_IMG_RSP start update firmware,len:%d,status:%d\n",p-s,status);
             }
             else {
                 infof("MT_OTA_NEXT_IMG_RSP the same firmware\n");
@@ -156,8 +156,11 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
             *p++ = BREAK_UINT32(offset, 2);
             *p++ = BREAK_UINT32(offset, 3);
             if ( mtOtaCbs.pfnOtaFileReadCb){
-                int ret=mtOtaCbs.pfnOtaFileReadCb(fid.type,offset,p+1,readLen);
+                char *readBuf=malloc(readLen);
+                int ret=mtOtaCbs.pfnOtaFileReadCb(fid.type,offset,readBuf,readLen);
                 if (ret>=0){
+                    memcpy(p+1,readBuf,ret);
+                    free(readBuf);
                     *p++ = (uint8_t)ret;
 #if 0
                     struct MD5Context ctx;
@@ -195,6 +198,7 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
                 }else{
                     infof("pfnOtaFileReadCb failed:%d\n",ret);
                 }
+                free(readBuf);
             }
             infof("MT_OTA_FILE_READ_RSP not handled\n");
             break;

@@ -84,8 +84,6 @@ typedef struct
 #define FAILURE 0x01
 #define HI_UINT16(a) (((a) >> 8) & 0xFF)
 #define LO_UINT16(a) ((a) & 0xFF)
-#define BREAK_UINT32(var, ByteNum) \
-                (uint8_t)((uint32_t)(((var)>>((ByteNum) * 8)) & 0x00FF))
 
 void otaRegisterCallbacks(mtOtaCb_t cbs);
 
