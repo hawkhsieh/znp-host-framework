@@ -145,11 +145,12 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
             *p++ = BREAK_UINT32(offset, 1);
             *p++ = BREAK_UINT32(offset, 2);
             *p++ = BREAK_UINT32(offset, 3);
-            *p++ = readLen;
             if ( mtOtaCbs.pfnOtaFileReadCb){
-                int ret=mtOtaCbs.pfnOtaFileReadCb(offset,p,readLen);
+                int ret=mtOtaCbs.pfnOtaFileReadCb(offset,p+1,readLen);
                 if (ret>=0){
 
+                    *p++ = (uint8_t)readLen;
+#if 0
                     struct MD5Context ctx;
                     MD5Init(&ctx);
                     MD5Update(&ctx, (unsigned char*)p, ret);
@@ -175,8 +176,8 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
                             }
                         }
                     }
-                    //infof("state=%c,md5#%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x\n",calmd5,digest[0], digest[1], digest[2], digest[3], digest[4], digest[5], digest[6], digest[7], digest[8], digest[9], digest[10], digest[11], digest[12], digest[13], digest[14], digest[15] );
-
+                    infof("state=%c,md5#%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x\n",calmd5,digest[0], digest[1], digest[2], digest[3], digest[4], digest[5], digest[6], digest[7], digest[8], digest[9], digest[10], digest[11], digest[12], digest[13], digest[14], digest[15] );
+#endif
                     p+=ret;
                     int status = rpcSendFrame(MT_RPC_SYS_OTA , MT_OTA_FILE_READ_RSP, s, p-s);
 //                    infof("JACK MT_OTA_FILE_READ_RSP:%d\n",status);
