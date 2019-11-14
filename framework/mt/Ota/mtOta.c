@@ -155,10 +155,10 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
             *p++ = BREAK_UINT32(offset, 1);
             *p++ = BREAK_UINT32(offset, 2);
             *p++ = BREAK_UINT32(offset, 3);
-            *p++ = readLen;
             if ( mtOtaCbs.pfnOtaFileReadCb){
                 int ret=mtOtaCbs.pfnOtaFileReadCb(fid.type,offset,p,readLen);
                 if (ret>=0){
+                    *p++ = ret;
 #if 0
                     struct MD5Context ctx;
                     MD5Init(&ctx);
