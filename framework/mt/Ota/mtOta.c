@@ -150,15 +150,15 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
             p=&rpcBuff[2];
             p=OTA_FileIdToStream(&fid,p);
             p=OTA_AfAddrToStream(&addr,p);
-            *p++=0; //status
+            *p++=(uint8_t)0; //status
             *p++ = BREAK_UINT32(offset, 0);
             *p++ = BREAK_UINT32(offset, 1);
             *p++ = BREAK_UINT32(offset, 2);
             *p++ = BREAK_UINT32(offset, 3);
             if ( mtOtaCbs.pfnOtaFileReadCb){
-                int ret=mtOtaCbs.pfnOtaFileReadCb(fid.type,offset,p,readLen);
+                int ret=mtOtaCbs.pfnOtaFileReadCb(fid.type,offset,p+1,readLen);
                 if (ret>=0){
-                    *p++ = ret;
+                    *p++ = (uint8_t)ret;
 #if 0
                     struct MD5Context ctx;
                     MD5Init(&ctx);
