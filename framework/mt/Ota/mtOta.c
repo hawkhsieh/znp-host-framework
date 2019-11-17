@@ -84,7 +84,7 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
                 }
                 fclose(fp);
             }
-            infof("fwver:%08x,hwver:%d,endpoint:%02x,shortAddr:%04x,devver:%04x,devtype:%02x\n",fid.version,hwver,addr.endPoint,addr.shortAddr,curFid.version,curFid.type);
+            infof("fwver:%08x,hwver:%d,endpoint:%02x,shortAddr:%04x,devver:%08x,devtype:%02x\n",fid.version,hwver,addr.endPoint,addr.addr.shortAddr,curFid.version,curFid.type);
 
             *p++=status; //status
             *p++=0; //option
@@ -151,7 +151,7 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
                 int ret=mtOtaCbs.pfnOtaFileReadCb(offset,p+1,readLen);
                 if (ret>=0){
 
-                    *p++ = (uint8_t)readLen;
+                    *p++ = (uint8_t)ret;
 #if 0
                     struct MD5Context ctx;
                     MD5Init(&ctx);
