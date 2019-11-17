@@ -60,7 +60,7 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
             p=OTA_StreamToAfAddr(&addr,p);
             p++;
             uint16_t hwver = BUILD_UINT16(p[0],p[1]);
-            infof("hwver:%d,fwver:%04x,endpoint:%02x,shortAddr:%04x\n",hwver,fid.version,addr.endPoint,addr.addr.shortAddr);
+
             uint8_t *s=&rpcBuff[2];
             p=&rpcBuff[2];
          //   fid.version=0xbbbb;
@@ -68,10 +68,11 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
 
             uint32_t size=0;
             FILE *fp=fopen(OTAZB_FILEPATH,"r");
+            uint8_t status=1;
             if (fp){
                 if ( fseek(fp, (size_t)10, SEEK_SET) == 0 ){
-                   fread(&fid, 1, sizeof(zclOTA_FileID_t), fp);
-		}
+                    fread(&fid, 1, sizeof(zclOTA_FileID_t), fp);
+                }
 
                 p=OTA_FileIdToStream(&fid,p);
                 p=OTA_AfAddrToStream(&addr,p);
@@ -79,12 +80,13 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
                 if ( fseek(fp, (size_t)0, SEEK_END) == 0 ){
                     size=ftell(fp);
                     debugf("Got size:%u\n",size);
-                    fclose(fp);
-                    *p++=0; //status
+                    status=0;
                 }
+                fclose(fp);
             }
+            infof("fwver:%08x,hwver:%d,endpoint:%02x,shortAddr:%04x,devver:%04x,devtype:%02x\n",fid.version,hwver,addr.endPoint,addr.shortAddr,curFid.version,curFid.type);
 
-//            *p++=1; //status
+            *p++=status; //status
             *p++=0; //option
             *p++ = BREAK_UINT32(size, 0);
             *p++ = BREAK_UINT32(size, 1);
@@ -98,10 +100,10 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
                 }
 
                 int status = rpcSendFrame(MT_RPC_SYS_OTA , MT_OTA_NEXT_IMG_RSP, s , p-s);
-                debugf("MT_OTA_NEXT_IMG_RSP start update firmware");
+                debugf("MT_OTA_NEXT_IMG_RSP start update firmware,status:%d\n",status);
             }
             else {
-                debugf("MT_OTA_NEXT_IMG_RSP the same firmware");
+                debugf("MT_OTA_NEXT_IMG_RSP ver %04x != %04x\n",fid.version,curFid.version);
             }
 //            infof("JACK MT_OTA_NEXT_IMG_RSP:%d\n",status);
 
