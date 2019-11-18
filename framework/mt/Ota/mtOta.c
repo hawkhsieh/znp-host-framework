@@ -41,7 +41,8 @@ void md5( char *buf , int len ,unsigned char *digest, int reset , int final ){
     }
 
 }
-
+static uint16_t shortAddr;
+static time_t lastOtaTime;
 
 void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
 {
@@ -94,7 +95,12 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
             *p++ = BREAK_UINT32(size, 3);
 //            infof("JACK MT_OTA_NEXT_IMG_REQ\n");
 
-            if(fid.version != curFid.version) {
+            time_t now=time(0);
+            if(fid.type == curFid.type && fid.version != curFid.version && ((now-lastOtaTime)>180 || lastOtaTime==0 || shortAddr == addr.addr.shortAddr )) {
+                shortAddr=addr.addr.shortAddr;
+                lastOtaTime=now;
+                infof("shortaddr:%04x ota start\n",shortAddr);
+
                 if ( mtOtaCbs.pfnOtaNextImgCb){
                     mtOtaCbs.pfnOtaNextImgCb();
                 }
@@ -136,7 +142,10 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
             p+=4;
             uint8_t readLen=*p;
 
-            debugf("read offset:%d,readLen:%d,shortAddr:%04x\n",offset,readLen,addr.addr.shortAddr);
+            if ( shortAddr==addr.addr.shortAddr){
+                lastOtaTime=time(0);
+            }
+            infof("read offset:%d,readLen:%d,shortAddr:%04x\n",offset,readLen,addr.addr.shortAddr);
 
             uint8_t *s=&rpcBuff[2];
             p=&rpcBuff[2];
@@ -199,6 +208,12 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
             uint16_t shortaddr = BUILD_UINT16(p[0],p[1]);
             p+=2;
             infof("JACK MT_OTA_STATUS_IND,panid:%04x,shortaddr:%04x,type:%02x,status:%02x,option:%02x\n",panid,shortaddr,p[0],p[1],p[2]);
+            if (shortAddr==shortaddr){
+                shortAddr=0;
+                lastOtaTime=0;
+                infof("shortaddr:%04x ota done\n",shortaddr);
+            }
+
             break;
         }
         default:
