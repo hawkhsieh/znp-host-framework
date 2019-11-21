@@ -98,7 +98,6 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
             time_t now=time(0);
             if(fid.type == curFid.type && fid.version != curFid.version && ((now-lastOtaTime)>180 || lastOtaTime==0 || shortAddr == addr.addr.shortAddr )) {
                 shortAddr=addr.addr.shortAddr;
-                lastOtaTime=now;
                 infof("shortaddr:%04x ota start\n",shortAddr);
 
                 if ( mtOtaCbs.pfnOtaNextImgCb){
