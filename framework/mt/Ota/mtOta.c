@@ -41,6 +41,76 @@ void md5( char *buf , int len ,unsigned char *digest, int reset , int final ){
     }
 
 }
+
+static int testFlag=0;
+static time_t keepAliveTime;
+static uint32_t preOffset;
+inline void otaKeepAlive(uint16_t shortAddr){
+    uint8_t buf[64] = {0};
+//0xfe 0x13 0x36 0x00 0x55 0xaa 0x0f 0x04 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0xd00xff 0xff 0xba
+//    infof("otaKeepAlive");
+//0xfe 0x0f 0x36 0x00 0x55 0xaa 0x0f 0x04 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0xd0 0xff 0xff 0xba
+    buf[0] = 0x55;
+    buf[1] = 0xaa;
+    buf[2] = 0x0f;
+    buf[3] = 0x04;
+    buf[4] = 0x00;
+    buf[5] = 0x00;
+    buf[6] = 0x00;
+    buf[7] = 0x00;
+    buf[8] = 0x00;
+    buf[9] = 0x00;
+    buf[10] = 0x00;
+    buf[11] = 0x00;
+    buf[12] = 0xd0;
+    buf[13] = 0x00;
+    buf[14] = 0x00;
+
+    buf[14] = ((shortAddr>>8) & 0xff);
+    buf[13] = (shortAddr & 0xff);
+    int status = rpcSendFrame(0x36 , 0x00, buf, 0x0f);
+
+/*
+    buf[0] = 0x55;
+    buf[1] = 0xaa;
+    buf[2] = 0x13;
+    buf[3] = 0x04;
+    buf[4] = 0x00;
+    buf[5] = 0x12;
+    buf[6] = 0x4b;
+    buf[7] = 0x00;
+    buf[8] = 0x18;
+    buf[9] = 0x13;
+    buf[10] = 0xe7;
+    buf[11] = 0x83;
+    buf[12] = 0x02;
+    buf[13] = 0x00;
+    buf[14] = 0x02;
+    buf[15] = 0x00;
+    buf[16] = 0x02;
+    buf[17] = 0x64;
+    buf[18] = 0x00;
+
+    if(shortAddr == 0x4d9a) {
+        buf[11] = 0x83;
+    }
+    else {
+        buf[11] = 0xa4;
+    }
+
+    if(testFlag == 1) {
+        buf[17] = 0x64;
+        testFlag = 0;
+    }
+    else {
+        buf[17] = 0x00;
+        testFlag = 1;
+    }
+
+    int status = rpcSendFrame(0x36 , 0x00, buf, 0x13);
+*/
+}
+
 static uint16_t shortAddr;
 static time_t lastOtaTime;
 
@@ -49,6 +119,8 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
     dbg_print(PRINT_LEVEL_VERBOSE, "JACK otaProcess: processing CMD0:%x, CMD1:%x\n",
             rpcBuff[0], rpcBuff[1]);
     uint8_t *p=&rpcBuff[2];
+
+    
     //process the synchronous SRSP from SREQ
     if ((rpcBuff[0] & MT_RPC_CMD_TYPE_MASK) == MT_RPC_CMD_AREQ ){
         switch(rpcBuff[1]){
@@ -87,17 +159,22 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
             }
             infof("fwver:%08x,hwver:%d,endpoint:%02x,shortAddr:%04x,devver:%08x,devtype:%02x\n",fid.version,hwver,addr.endPoint,addr.addr.shortAddr,curFid.version,curFid.type);
 
-            *p++=status; //status
-            *p++=0; //option
-            *p++ = BREAK_UINT32(size, 0);
-            *p++ = BREAK_UINT32(size, 1);
-            *p++ = BREAK_UINT32(size, 2);
-            *p++ = BREAK_UINT32(size, 3);
 //            infof("JACK MT_OTA_NEXT_IMG_REQ\n");
+
 
             time_t now=time(0);
             if(fid.type == curFid.type && fid.version != curFid.version && ((now-lastOtaTime)>180 || lastOtaTime==0 || shortAddr == addr.addr.shortAddr )) {
+                *p++=status; //status
+                *p++=0; //option
+                *p++ = BREAK_UINT32(size, 0);
+                *p++ = BREAK_UINT32(size, 1);
+                *p++ = BREAK_UINT32(size, 2);
+                *p++ = BREAK_UINT32(size, 3);
+
                 shortAddr=addr.addr.shortAddr;
+                //lastOtaTime=time(0);
+                keepAliveTime=lastOtaTime;
+                preOffset = 0;
                 infof("shortaddr:%04x ota start\n",shortAddr);
 
                 if ( mtOtaCbs.pfnOtaNextImgCb){
@@ -108,6 +185,21 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
                 debugf("MT_OTA_NEXT_IMG_RSP start update firmware,status:%d\n",status);
             }
             else {
+	            p=&rpcBuff[2];
+				fid.manufacturer = 0xffff;
+				fid.type = 0xff;
+                p=OTA_FileIdToStream(&fid,p);
+                p=OTA_AfAddrToStream(&addr,p);
+
+                *p++=status; //status
+                *p++=0; //option
+                *p++ = BREAK_UINT32(size, 0);
+                *p++ = BREAK_UINT32(size, 1);
+                *p++ = BREAK_UINT32(size, 2);
+                *p++ = BREAK_UINT32(size, 3);
+
+                int status = rpcSendFrame(MT_RPC_SYS_OTA , MT_OTA_NEXT_IMG_RSP, s , p-s);
+
                 debugf("MT_OTA_NEXT_IMG_RSP ver %04x != %04x\n",fid.version,curFid.version);
             }
 //            infof("JACK MT_OTA_NEXT_IMG_RSP:%d\n",status);
@@ -143,7 +235,13 @@ void otaProcess(uint8_t *rpcBuff, uint8_t rpcLen)
 
             if ( shortAddr==addr.addr.shortAddr){
                 lastOtaTime=time(0);
+                if(preOffset == offset && lastOtaTime > keepAliveTime+5) {
+                    keepAliveTime = lastOtaTime;
+					otaKeepAlive(shortAddr);
+                }
             }
+            preOffset = offset;
+
             infof("read offset:%d,readLen:%d,shortAddr:%04x\n",offset,readLen,addr.addr.shortAddr);
 
             uint8_t *s=&rpcBuff[2];
